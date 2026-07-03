@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(node -e ' *)",
+      "Bash(mkdir -p \"c:/Users/tunca/OneDrive/Desktop/Github/iphone-store/public\")"
+    ]
+  }
+}
