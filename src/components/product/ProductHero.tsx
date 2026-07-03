@@ -13,10 +13,10 @@ import { clsx } from 'clsx';
 import { AppImage } from '@/components/ui/AppImage';
 import { Badge } from '@/components/ui/Badge';
 import { InstallmentPreview } from './InstallmentPreview';
-import type { Product } from '@/types/product';
+import type { Product, ProductClient } from '@/types/product';
 
 interface ProductHeroProps {
-  product: Product;
+  product: Product | ProductClient;
   onReserve: () => void;
 }
 

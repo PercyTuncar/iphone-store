@@ -33,7 +33,7 @@ import { uploadVoucher } from '@/lib/firebase/storage';
 import { getShippingCost } from '@/lib/firebase/shipping';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Timestamp } from 'firebase/firestore';
-import type { Product } from '@/types/product';
+import type { ProductClient } from '@/types/product';
 
 type PaymentMethod = 'online' | 'offline' | null;
 
@@ -45,7 +45,7 @@ interface ShippingData {
 interface PaymentModalProps {
   open: boolean;
   onClose: () => void;
-  product: Product;
+  product: ProductClient;
 }
 
 export function PaymentModal({ open, onClose, product }: PaymentModalProps) {

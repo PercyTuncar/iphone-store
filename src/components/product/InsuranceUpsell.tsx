@@ -9,10 +9,10 @@
 import { clsx } from 'clsx';
 import { Shield, ShieldCheck } from 'lucide-react';
 import { formatSoles } from '@/lib/utils/currency';
-import type { Product } from '@/types/product';
+import type { ProductClient } from '@/types/product';
 
 interface InsuranceUpsellProps {
-  product: Product;
+  product: ProductClient;
   selected: boolean;
   onToggle: (selected: boolean) => void;
 }

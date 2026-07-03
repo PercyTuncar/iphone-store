@@ -108,6 +108,9 @@ export interface Product {
   publishedAt: Timestamp | null;
 }
 
+/** Client-side product shape used in interactive components */
+export type ProductClient = Omit<Product, 'createdAt' | 'updatedAt' | 'publishedAt'>;
+
 /** Lightweight version used in listings / cards */
 export type ProductCard = Pick<
   Product,

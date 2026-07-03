@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { toast } from '@/components/ui/Toast';
-import type { Product } from '@/types/product';
+import type { ProductClient } from '@/types/product';
 
 interface ShippingData {
   name: string;
@@ -25,7 +25,7 @@ interface ShippingData {
 }
 
 interface OfflinePaymentPanelProps {
-  product: Product;
+  product: ProductClient;
   amountDue: number;
   onSubmit: (voucher: File, shipping: ShippingData) => Promise<void>;
 }
