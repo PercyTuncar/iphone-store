@@ -163,8 +163,12 @@ function calcInstallmentAmount(
 
   if (remainingInstallments <= 0) return 0;
 
-  // Aplicar interés al monto restante y dividir
-  return Math.ceil((remainingAmount * (1 + rate / 100)) / remainingInstallments);
+  // Aplicar interés al monto restante
+  const totalWithInterest = remainingAmount * (1 + rate / 100);
+
+  // Dividir entre cuotas y redondear a 2 decimales (centavos)
+  // Usamos Math.round para redondeo matemático estándar, no ceil
+  return Math.round((totalWithInterest / remainingInstallments) * 100) / 100;
 }
 
 // ─── Props ──────────────────────────────────────────────────
@@ -1530,7 +1534,9 @@ function Section3Pricing({
               <p className="text-caption text-text-secondary">
                 {form.downPayment > 0 ? `Cuotas 2-${form.installments}` : 'Por cuota'}
               </p>
-              <p className="font-bold text-[22px] text-text-primary">S/ {installmentAmount.toLocaleString()}</p>
+              <p className="font-bold text-[22px] text-text-primary">
+                S/ {installmentAmount.toFixed(2)}
+              </p>
               <p className="text-caption text-text-secondary">
                 {form.downPayment > 0
                   ? `${form.installments - 1} cuotas restantes`
@@ -1540,7 +1546,11 @@ function Section3Pricing({
             <div>
               <p className="text-caption text-text-secondary">Total con interés</p>
               <p className="font-semibold text-[17px]">
-                S/ {(form.downPayment + installmentAmount * (form.downPayment > 0 ? form.installments - 1 : form.installments)).toLocaleString()}
+                S/ {(
+                  Math.round(
+                    (form.downPayment + installmentAmount * (form.downPayment > 0 ? form.installments - 1 : form.installments)) * 100
+                  ) / 100
+                ).toFixed(2)}
               </p>
             </div>
             <div>
@@ -1548,7 +1558,7 @@ function Section3Pricing({
                 {form.downPayment > 0 ? 'Enganche (1ª cuota)' : 'Pago hoy (1ª cuota)'}
               </p>
               <p className="font-semibold text-[17px]">
-                S/ {(form.downPayment > 0 ? form.downPayment : installmentAmount).toLocaleString()}
+                S/ {(form.downPayment > 0 ? form.downPayment : installmentAmount).toFixed(2)}
               </p>
             </div>
           </div>
