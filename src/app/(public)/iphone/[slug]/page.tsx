@@ -86,7 +86,7 @@ export default async function IPhoneProductPage({ params }: Props) {
           { name: 'iPhone en Cuotas',  url: `${siteUrl}/iphone-en-cuotas` },
           { name: product.model, url: `${siteUrl}/iphone/${slug}` },
         ]}
-        className="container-main pt-4 pb-0"
+        className="container-main"
       />
 
       {/* Interactive hero + sticky bar + payment modal */}

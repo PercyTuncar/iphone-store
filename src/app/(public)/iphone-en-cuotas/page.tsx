@@ -99,7 +99,7 @@ export default async function IPhoneEnCuotasPage() {
           { name: 'Inicio', url: SITE_URL },
           { name: 'iPhone en Cuotas', url: `${SITE_URL}/iphone-en-cuotas` },
         ]}
-        className="container-main pt-4 pb-0"
+        className="container-main"
       />
 
       {/* Hero section */}
