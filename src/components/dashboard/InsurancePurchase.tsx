@@ -46,7 +46,7 @@ export function InsurancePurchase({
   const { isExpired } = useCountdown(dueDate);
 
   // PRD §10.3: lock purchase the moment due date passes
-  const canBuy = !isExpired && dueDate !== null && !order.insurance.hasPurchased;
+  const canBuy = !isExpired && dueDate !== null && order.insurance && !order.insurance.hasPurchased;
 
   const handleBuy = async (plan: 1 | 2 | 3) => {
     setLoading(plan);
@@ -58,7 +58,7 @@ export function InsurancePurchase({
   };
 
   // ── A: Already has insurance ─────────────────────────────
-  if (order.insurance.hasPurchased) {
+  if (order.insurance && order.insurance.hasPurchased) {
     const { monthsCovered, monthsUsed } = order.insurance;
     const remaining = monthsCovered - monthsUsed;
 

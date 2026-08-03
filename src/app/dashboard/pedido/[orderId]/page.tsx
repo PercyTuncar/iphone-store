@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Clock } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useOrder } from '@/lib/hooks/useOrder';
 import { useInsuranceCoverage } from '@/lib/hooks/useInsuranceCoverage';
@@ -105,6 +105,7 @@ export default function OrderDetailPage() {
 
   const showDelivery = ['delivering', 'delivered', 'completed'].includes(order.status);
   const isDefaulted  = order.status === 'defaulted' || order.status === 'cancelled';
+  const isPending = order.status === 'pending_first_payment' || order.status === 'payment_rejected_first';
 
   return (
     <div className="space-y-6">
@@ -134,16 +135,73 @@ export default function OrderDetailPage() {
               {STATUS_LABELS[order.status] ?? order.status}
             </Badge>
             <div className="grid grid-cols-2 gap-x-6 gap-y-1 mt-3 text-[14px]">
+              <span className="text-text-secondary">Total</span>
+              <span className="font-semibold">{formatSoles(order.priceTotal)}</span>
               <span className="text-text-secondary">Cuota mensual</span>
               <span className="font-medium">{formatSoles(order.installmentAmount)}</span>
               <span className="text-text-secondary">Plan</span>
               <span className="font-medium">{order.installments} cuotas</span>
+              <span className="text-text-secondary">Inicial</span>
+              <span className="font-medium">{formatSoles(order.downPayment || 0)}</span>
               <span className="text-text-secondary">Envío a</span>
               <span className="font-medium">{order.shippingAddress?.department || '—'}</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Pending warning - Mostrar resumen mientras espera aprobación */}
+      {isPending && (
+        <div className="bg-warning/5 border border-warning/25 rounded-[14px] p-5">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center flex-shrink-0">
+              <Clock size={20} className="text-warning" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-warning text-[17px] mb-2">
+                Esperando aprobación de tu primer pago
+              </p>
+              <p className="text-[14px] text-text-secondary mb-4">
+                Hemos recibido tu pedido. Una vez que confirmemos tu primer pago, activaremos tu plan de cuotas y podrás ver el cronograma completo aquí.
+              </p>
+            </div>
+          </div>
+
+          {/* Resumen del pedido pendiente */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-white rounded-xl">
+            <div>
+              <div className="text-caption text-text-secondary mb-1">Monto reservado</div>
+              <div className="text-[17px] font-semibold text-text-primary">
+                {formatSoles(order.priceTotal)}
+              </div>
+            </div>
+            <div>
+              <div className="text-caption text-text-secondary mb-1">Plan elegido</div>
+              <div className="text-[15px] font-medium text-text-primary">
+                {order.installments} cuotas de {formatSoles(order.installmentAmount)}
+              </div>
+            </div>
+            <div>
+              <div className="text-caption text-text-secondary mb-1">Fecha de pedido</div>
+              <div className="text-[15px] font-medium text-text-primary">
+                {order.createdAt?.toDate
+                  ? new Date(order.createdAt.toDate()).toLocaleDateString('es-PE', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })
+                  : 'Procesando...'}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 p-3 bg-accent/5 border border-accent/20 rounded-lg">
+            <p className="text-[13px] text-text-secondary">
+              <strong className="text-accent">💡 Próximo paso:</strong> Una vez aprobado tu primer pago, se generará automáticamente el cronograma de cuotas y podrás ver las fechas exactas de cada pago.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Defaulted warning */}
       {isDefaulted && (

@@ -41,6 +41,8 @@ export function useInsuranceCoverage({
     if (triggeredRef.current) return;
 
     // Only run if the order has active insurance with months remaining
+    if (!order || !order.insurance) return;
+
     const ins = order.insurance;
     if (!ins.hasPurchased) return;
     if (ins.monthsUsed >= ins.monthsCovered) return;

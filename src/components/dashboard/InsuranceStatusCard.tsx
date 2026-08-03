@@ -21,7 +21,8 @@ interface InsuranceStatusCardProps {
 export function InsuranceStatusCard({ order, coveredPayment }: InsuranceStatusCardProps) {
   const ins = order.insurance;
 
-  if (!ins.hasPurchased) return null;
+  // Validar que existe insurance
+  if (!ins || !ins.hasPurchased) return null;
 
   const remaining = ins.monthsCovered - ins.monthsUsed;
   const isExhausted = remaining <= 0;

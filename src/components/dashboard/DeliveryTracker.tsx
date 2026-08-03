@@ -40,6 +40,18 @@ const STATUS_ORDER = ['not_started', 'preparing', 'in_transit', 'delivered'] as 
 
 export function DeliveryTracker({ order }: DeliveryTrackerProps) {
   const { delivery, customerName, productTitle, id: orderId } = order;
+
+  // Validar que existe delivery
+  if (!delivery) {
+    return (
+      <div className="card p-5">
+        <p className="text-text-secondary text-center">
+          Información de envío no disponible
+        </p>
+      </div>
+    );
+  }
+
   const currentIdx = STATUS_ORDER.indexOf(delivery.status);
 
   // WhatsApp message pre-filled

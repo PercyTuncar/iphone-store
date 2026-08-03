@@ -13,6 +13,7 @@
 
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import { DashboardNav } from '@/components/dashboard/DashboardNav';
 
 export default async function DashboardLayout({
   children,
@@ -29,7 +30,8 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-bg-secondary">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <DashboardNav />
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {children}
       </div>
     </div>
