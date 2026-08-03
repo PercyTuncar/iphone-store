@@ -163,12 +163,30 @@ function calcInstallmentAmount(
 
   if (remainingInstallments <= 0) return 0;
 
-  // Aplicar interés al monto restante
-  const totalWithInterest = remainingAmount * (1 + rate / 100);
+  // Si no hay interés, división simple
+  if (rate === 0) {
+    return Math.round((remainingAmount / remainingInstallments) * 100) / 100;
+  }
 
-  // Dividir entre cuotas y redondear a 2 decimales (centavos)
-  // Usamos Math.round para redondeo matemático estándar, no ceil
-  return Math.round((totalWithInterest / remainingInstallments) * 100) / 100;
+  // Si hay interés, usar fórmula de amortización francesa (Sistema Francés)
+  // Cuota = P * [i * (1 + i)^n] / [(1 + i)^n - 1]
+  // Donde:
+  // P = Principal (monto a financiar)
+  // i = Tasa de interés mensual (en decimal, ej: 10% = 0.10)
+  // n = Número de cuotas
+
+  const i = rate / 100; // Convertir porcentaje a decimal
+  const n = remainingInstallments;
+  const P = remainingAmount;
+
+  // Calcular (1 + i)^n
+  const onePlusIToN = Math.pow(1 + i, n);
+
+  // Aplicar fórmula: P * [i * (1 + i)^n] / [(1 + i)^n - 1]
+  const cuota = P * (i * onePlusIToN) / (onePlusIToN - 1);
+
+  // Redondear a 2 decimales (centavos)
+  return Math.round(cuota * 100) / 100;
 }
 
 // ─── Props ──────────────────────────────────────────────────
