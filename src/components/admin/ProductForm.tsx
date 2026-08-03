@@ -18,7 +18,7 @@ import { useRouter } from 'next/navigation';
 import {
   Info, Image as ImageIcon, DollarSign, ShieldAlert, CreditCard,
   Cpu, FileText, Search, Plus, Trash2, GripVertical, Upload,
-  Check, Save, Globe,
+  Check, Save, Globe, ChevronLeft, ChevronRight, Download,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -37,6 +37,7 @@ interface ImageItem {
   url: string;
   file?: File;
   uploading?: boolean;
+  tempId?: string;
 }
 
 interface FaqItem {
@@ -147,9 +148,23 @@ function slugify(text: string): string {
     .trim();
 }
 
-function calcInstallmentAmount(total: number, rate: number, count: number): number {
+function calcInstallmentAmount(
+  total: number,
+  rate: number,
+  count: number,
+  downPayment: number
+): number {
   if (!total || !count) return 0;
-  return Math.ceil((total * (1 + rate / 100)) / count);
+
+  // Si hay enganche, ese es la primera cuota
+  // Entonces restamos el enganche del total y dividimos entre las cuotas restantes
+  const remainingAmount = downPayment > 0 ? total - downPayment : total;
+  const remainingInstallments = downPayment > 0 ? count - 1 : count;
+
+  if (remainingInstallments <= 0) return 0;
+
+  // Aplicar interés al monto restante y dividir
+  return Math.ceil((remainingAmount * (1 + rate / 100)) / remainingInstallments);
 }
 
 // ─── Props ──────────────────────────────────────────────────
@@ -277,7 +292,12 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
     autoSaveTimer.current = setTimeout(() => handleAutoSave(), 30000);
   }, []); // eslint-disable-line
 
-  const installmentAmount = calcInstallmentAmount(form.priceTotal, form.interestRate, form.installments);
+  const installmentAmount = calcInstallmentAmount(
+    form.priceTotal,
+    form.interestRate,
+    form.installments,
+    form.downPayment
+  );
 
   // ── Auto-save ──
   const handleAutoSave = useCallback(async () => {
@@ -529,7 +549,12 @@ function buildProductData(
     thumbnailUrl: imageUrls[0] ?? '',
     priceTotal:   form.priceTotal,
     installments: form.installments,
-    installmentAmount: calcInstallmentAmount(form.priceTotal, form.interestRate, form.installments),
+    installmentAmount: calcInstallmentAmount(
+      form.priceTotal,
+      form.interestRate,
+      form.installments,
+      form.downPayment
+    ),
     interestRate: form.interestRate / 100,
     downPayment:  form.downPayment,
     penaltyTier1Days:   form.penaltyTier1Days,
@@ -1175,25 +1200,147 @@ function Section2Images({
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [urlInput, setUrlInput] = useState('');
+  const [uploading, setUploading] = useState<{[key: string]: number}>({});
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
-  const addFromUrl = () => {
+  // Upload desde URL: descargar y re-subir a Firebase
+  const addFromUrl = async () => {
     const trimmed = urlInput.trim();
     if (!trimmed || images.length >= 8) return;
-    setImages(prev => [...prev, { url: trimmed }]);
+
+    const tempId = `temp-${Date.now()}`;
     setUrlInput('');
+
+    // Agregar placeholder mientras descarga
+    setImages(prev => [...prev, { url: trimmed, tempId }]);
+    setUploading(prev => ({ ...prev, [tempId]: 0 }));
+
+    try {
+      // Descargar imagen desde URL
+      const response = await fetch(trimmed);
+      if (!response.ok) throw new Error('No se pudo descargar la imagen');
+
+      const blob = await response.blob();
+      const file = new File([blob], `image-${Date.now()}.jpg`, { type: blob.type });
+
+      setUploading(prev => ({ ...prev, [tempId]: 50 }));
+
+      // Subir a Firebase Storage
+      const firebaseUrl = await uploadProductImage(productId || 'temp', file);
+
+      setUploading(prev => ({ ...prev, [tempId]: 100 }));
+
+      // Reemplazar con URL de Firebase
+      setImages(prev => prev.map(img =>
+        img.tempId === tempId ? { url: firebaseUrl } : img
+      ));
+
+      toast.success('✓ Imagen descargada y subida a Firebase Storage');
+
+      setTimeout(() => {
+        setUploading(prev => {
+          const next = { ...prev };
+          delete next[tempId];
+          return next;
+        });
+      }, 1000);
+    } catch (error) {
+      console.error('Error uploading from URL:', error);
+      toast.error('Error al descargar/subir la imagen desde URL');
+      setImages(prev => prev.filter(img => img.tempId !== tempId));
+      setUploading(prev => {
+        const next = { ...prev };
+        delete next[tempId];
+        return next;
+      });
+    }
   };
 
+  // Upload desde archivo: subir directamente a Firebase
   const addFromFile = async (files: FileList | null) => {
-    if (!files) return;
+    if (!files || !productId) {
+      if (!productId) toast.error('Guarda el producto primero antes de subir imágenes');
+      return;
+    }
+
     const toAdd = Array.from(files).slice(0, 8 - images.length);
+
     for (const file of toAdd) {
+      const tempId = `file-${Date.now()}-${Math.random()}`;
       const preview = URL.createObjectURL(file);
-      setImages(prev => [...prev, { url: preview, file }]);
+
+      // Agregar preview inmediatamente
+      setImages(prev => [...prev, { url: preview, tempId }]);
+      setUploading(prev => ({ ...prev, [tempId]: 0 }));
+
+      try {
+        // Simular progreso
+        setUploading(prev => ({ ...prev, [tempId]: 30 }));
+
+        // Subir a Firebase Storage
+        const firebaseUrl = await uploadProductImage(productId, file);
+
+        setUploading(prev => ({ ...prev, [tempId]: 100 }));
+
+        // Reemplazar preview con URL real
+        setImages(prev => prev.map(img =>
+          img.tempId === tempId ? { url: firebaseUrl } : img
+        ));
+
+        // Liberar blob URL
+        URL.revokeObjectURL(preview);
+
+        toast.success('✓ Imagen subida a Firebase Storage');
+
+        setTimeout(() => {
+          setUploading(prev => {
+            const next = { ...prev };
+            delete next[tempId];
+            return next;
+          });
+        }, 1000);
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        toast.error('Error al subir la imagen a Firebase');
+        setImages(prev => prev.filter(img => img.tempId !== tempId));
+        URL.revokeObjectURL(preview);
+        setUploading(prev => {
+          const next = { ...prev };
+          delete next[tempId];
+          return next;
+        });
+      }
     }
   };
 
   const removeImage = (idx: number) => {
+    const img = images[idx];
+    if (img.url.startsWith('blob:')) {
+      URL.revokeObjectURL(img.url);
+    }
     setImages(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  // Drag and drop para reordenar
+  const handleDragStart = (idx: number) => {
+    setDraggedIndex(idx);
+  };
+
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === idx) return;
+
+    setImages(prev => {
+      const arr = [...prev];
+      const [draggedItem] = arr.splice(draggedIndex, 1);
+      arr.splice(idx, 0, draggedItem);
+      return arr;
+    });
+    setDraggedIndex(idx);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
   };
 
   const moveImage = (from: number, to: number) => {
@@ -1210,77 +1357,120 @@ function Section2Images({
       <SectionHeader title="Imágenes del Producto" icon={ImageIcon} />
       <p className="text-label text-text-secondary">
         Máximo 8 imágenes. La primera imagen es la imagen principal y la Open Graph.
-        Arrastra para reordenar.
+        Las imágenes se suben automáticamente a Firebase Storage. Arrastra para reordenar.
       </p>
 
       {/* Image grid */}
       {images.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {images.map((img, idx) => (
-            <div key={img.url} className="relative group rounded-[10px] overflow-hidden bg-bg-secondary aspect-square border border-border">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img.url} alt={`Imagen ${idx + 1}`}
-                className="w-full h-full object-contain" />
-              {idx === 0 && (
-                <span className="absolute top-1.5 left-1.5 badge badge-accent text-[10px] px-2 py-0.5">
-                  Principal
-                </span>
-              )}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                {idx > 0 && (
-                  <button onClick={() => moveImage(idx, idx - 1)}
-                    className="w-7 h-7 bg-white/90 rounded-full flex items-center justify-center hover:bg-white"
-                    title="Mover izquierda">
-                    <GripVertical size={14} className="text-text-primary" />
-                  </button>
+          {images.map((img, idx) => {
+            const uploadProgress = img.tempId ? uploading[img.tempId] : undefined;
+            const isUploading = uploadProgress !== undefined;
+
+            return (
+              <div
+                key={img.url + idx}
+                draggable={!isUploading}
+                onDragStart={() => handleDragStart(idx)}
+                onDragOver={(e) => handleDragOver(e, idx)}
+                onDragEnd={handleDragEnd}
+                className={clsx(
+                  "relative group rounded-[10px] overflow-hidden bg-bg-secondary aspect-square border border-border",
+                  !isUploading && "cursor-move",
+                  draggedIndex === idx && "opacity-50"
                 )}
-                <button onClick={() => removeImage(idx)}
-                  className="w-7 h-7 bg-danger/90 rounded-full flex items-center justify-center hover:bg-danger"
-                  title="Eliminar">
-                  <Trash2 size={13} className="text-white" />
-                </button>
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img.url} alt={`Imagen ${idx + 1}`}
+                  className="w-full h-full object-contain" />
+
+                {/* Upload progress overlay */}
+                {isUploading && (
+                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center">
+                    <div className="w-3/4 bg-bg-tertiary rounded-full h-2 mb-2">
+                      <div
+                        className="bg-accent h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                    <span className="text-white text-caption font-semibold">
+                      {uploadProgress}%
+                    </span>
+                  </div>
+                )}
+
+                {idx === 0 && !isUploading && (
+                  <span className="absolute top-1.5 left-1.5 badge badge-accent text-[10px] px-2 py-0.5">
+                    Principal
+                  </span>
+                )}
+
+                {!isUploading && (
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    {idx > 0 && (
+                      <button onClick={() => moveImage(idx, idx - 1)}
+                        className="w-8 h-8 rounded-full bg-white/90 hover:bg-white flex items-center justify-center"
+                        title="Mover a la izquierda">
+                        <ChevronLeft size={18} className="text-text-primary" />
+                      </button>
+                    )}
+                    {idx < images.length - 1 && (
+                      <button onClick={() => moveImage(idx, idx + 1)}
+                        className="w-8 h-8 rounded-full bg-white/90 hover:bg-white flex items-center justify-center"
+                        title="Mover a la derecha">
+                        <ChevronRight size={18} className="text-text-primary" />
+                      </button>
+                    )}
+                    <button onClick={() => removeImage(idx)}
+                      className="w-8 h-8 rounded-full bg-danger/90 hover:bg-danger flex items-center justify-center"
+                      title="Eliminar">
+                      <Trash2 size={16} className="text-white" />
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
+      {/* Add controls */}
       {images.length < 8 && (
-        <div className="grid sm:grid-cols-2 gap-4">
-          {/* File upload */}
-          <div>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full border-2 border-dashed border-border rounded-ios p-6 text-center hover:border-accent hover:bg-accent/5 transition-colors"
-            >
-              <Upload size={24} className="text-text-tertiary mx-auto mb-2" aria-hidden="true" />
-              <p className="text-label text-text-secondary">
-                Subir desde computadora
-              </p>
-              <p className="text-caption text-text-tertiary mt-1">JPG, PNG, WebP · Máx 8MB</p>
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="https://ejemplo.com/imagen.jpg (se descargará y subirá a Firebase)"
+              className="input flex-1"
+              value={urlInput}
+              onChange={e => setUrlInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addFromUrl()}
+            />
+            <button onClick={addFromUrl} className="btn btn-secondary px-4" type="button">
+              <Download size={18} className="mr-1.5" />
+              Descargar URL
             </button>
+          </div>
+          <div>
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/*"
               multiple
               className="hidden"
               onChange={e => addFromFile(e.target.files)}
             />
-          </div>
-          {/* URL input */}
-          <div className="space-y-2">
-            <Label>O pegar URL de imagen</Label>
-            <input
-              className="input"
-              value={urlInput}
-              onChange={e => setUrlInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addFromUrl()}
-              placeholder="https://example.com/iphone.jpg"
-            />
-            <Button variant="ghost" size="sm" onClick={addFromUrl} fullWidth>
-              <Plus size={15} aria-hidden="true" /> Agregar URL
-            </Button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="btn btn-primary px-4"
+              type="button"
+            >
+              <Upload size={18} className="mr-1.5" />
+              Subir desde computadora
+            </button>
+            <p className="text-caption text-text-secondary mt-1.5">
+              Las imágenes se suben automáticamente a Firebase Storage
+            </p>
           </div>
         </div>
       )}
@@ -1337,20 +1527,28 @@ function Section3Pricing({
           <p className="text-label font-semibold text-accent mb-2">Vista previa de precios</p>
           <div className="grid sm:grid-cols-3 gap-3 text-[15px]">
             <div>
-              <p className="text-caption text-text-secondary">Por cuota</p>
+              <p className="text-caption text-text-secondary">
+                {form.downPayment > 0 ? `Cuotas 2-${form.installments}` : 'Por cuota'}
+              </p>
               <p className="font-bold text-[22px] text-text-primary">S/ {installmentAmount.toLocaleString()}</p>
-              <p className="text-caption text-text-secondary">{form.installments} cuotas</p>
+              <p className="text-caption text-text-secondary">
+                {form.downPayment > 0
+                  ? `${form.installments - 1} cuotas restantes`
+                  : `${form.installments} cuotas`}
+              </p>
             </div>
             <div>
               <p className="text-caption text-text-secondary">Total con interés</p>
               <p className="font-semibold text-[17px]">
-                S/ {(installmentAmount * form.installments).toLocaleString()}
+                S/ {(form.downPayment + installmentAmount * (form.downPayment > 0 ? form.installments - 1 : form.installments)).toLocaleString()}
               </p>
             </div>
             <div>
-              <p className="text-caption text-text-secondary">Pago hoy (1ª cuota)</p>
+              <p className="text-caption text-text-secondary">
+                {form.downPayment > 0 ? 'Enganche (1ª cuota)' : 'Pago hoy (1ª cuota)'}
+              </p>
               <p className="font-semibold text-[17px]">
-                S/ {(installmentAmount + form.downPayment).toLocaleString()}
+                S/ {(form.downPayment > 0 ? form.downPayment : installmentAmount).toLocaleString()}
               </p>
             </div>
           </div>
