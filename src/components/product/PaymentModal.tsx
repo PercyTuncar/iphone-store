@@ -18,7 +18,7 @@
 import { useState, useCallback } from 'react';
 import { clsx } from 'clsx';
 import Link from 'next/link';
-import { CreditCard, Smartphone } from 'lucide-react';
+import { CreditCard, Smartphone, Calendar, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Modal } from '@/components/ui/Modal';
 import { InsuranceUpsell } from './InsuranceUpsell';
@@ -66,10 +66,13 @@ export function PaymentModal({
   const [method, setMethod]                         = useState<PaymentMethod>(null);
   const [termsAccepted, setTermsAccepted]           = useState(false);
 
-  // Reactive total: first installment + optional insurance + shipping (calculated later)
-  const baseAmount     = selectedInstallments > 0
-    ? (installmentCalculation?.installmentAmount ?? product.installmentAmount)
-    : product.priceTotal;
+  // Reactive total: first payment (down payment or first installment) + optional insurance
+  const baseAmount = selectedInstallments === 1
+    ? product.priceTotal // Pago al contado
+    : (product.downPayment > 0
+        ? product.downPayment // Primera cuota es el enganche
+        : (installmentCalculation?.installmentAmount ?? product.installmentAmount)); // Primera cuota normal
+
   const insuranceExtra = insuranceSelected ? product.insuranceCheckoutDiscount1Month : 0;
   const amountDue      = baseAmount + insuranceExtra;
 
@@ -217,18 +220,26 @@ export function PaymentModal({
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-[15px] text-text-primary truncate">{product.title}</p>
-              <p className="text-[13px] text-text-secondary mt-0.5">
-                {selectedInstallments === 1
-                  ? '💳 Pago único al contado'
-                  : `📅 ${selectedInstallments} cuotas mensuales`}
-              </p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                {selectedInstallments === 1 ? (
+                  <>
+                    <CheckCircle size={14} className="text-success flex-shrink-0" />
+                    <span className="text-[13px] text-text-secondary">Pago único al contado</span>
+                  </>
+                ) : (
+                  <>
+                    <Calendar size={14} className="text-accent flex-shrink-0" />
+                    <span className="text-[13px] text-text-secondary">{selectedInstallments} cuotas mensuales</span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Installment details */}
           {selectedInstallments > 1 && installmentCalculation && (
             <div className="p-4 space-y-2.5 text-[14px]">
-              {/* Primera cuota */}
+              {/* Primera cuota - GRANDE */}
               <div className="flex justify-between items-center py-2 border-b border-border/50">
                 <div>
                   <p className="font-medium text-text-primary">
@@ -236,42 +247,42 @@ export function PaymentModal({
                   </p>
                   <p className="text-[12px] text-text-tertiary">Al reservar</p>
                 </div>
-                <span className="text-[20px] font-bold text-accent">
+                <span className="text-[26px] font-bold text-accent leading-none">
                   {formatSoles(product.downPayment > 0 ? product.downPayment : installmentCalculation.installmentAmount)}
                 </span>
               </div>
 
-              {/* Cuotas restantes */}
+              {/* Cuotas restantes - MEDIANO */}
               {product.downPayment > 0 && (
                 <div className="flex justify-between items-center py-2 border-b border-border/50">
                   <div>
                     <p className="font-medium text-text-primary">Cuotas 2-{selectedInstallments}</p>
                     <p className="text-[12px] text-text-tertiary">{selectedInstallments - 1} pagos mensuales</p>
                   </div>
-                  <span className="text-[20px] font-bold text-accent">
+                  <span className="text-[18px] font-semibold text-text-secondary leading-none">
                     {formatSoles(installmentCalculation.installmentAmount)}
                   </span>
                 </div>
               )}
 
-              {/* Precio del producto */}
+              {/* Precio del producto - PEQUEÑO Y TACHADO */}
               <div className="flex justify-between items-center py-2">
-                <span className="text-text-secondary">Precio del producto</span>
-                <span className="font-medium text-text-secondary">{formatSoles(product.priceTotal)}</span>
+                <span className="text-[12px] text-text-tertiary">Precio del producto</span>
+                <span className="text-[13px] font-medium text-text-tertiary line-through">{formatSoles(product.priceTotal)}</span>
               </div>
 
-              {/* Interés */}
+              {/* Interés - PEQUEÑO */}
               {installmentCalculation.totalInterest > 0 && (
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-text-secondary">Interés financiero</span>
-                  <span className="font-medium text-warning">+{formatSoles(installmentCalculation.totalInterest)}</span>
+                  <span className="text-[12px] text-text-tertiary">Interés financiero</span>
+                  <span className="text-[13px] font-medium text-warning">+{formatSoles(installmentCalculation.totalInterest)}</span>
                 </div>
               )}
 
-              {/* Total */}
-              <div className="flex justify-between items-baseline pt-3 border-t-2 border-border">
-                <span className="text-[15px] font-semibold text-text-primary">Total a pagar</span>
-                <span className="text-[24px] font-bold text-accent leading-none">
+              {/* Total - PEQUEÑO Y DISCRETO */}
+              <div className="flex justify-between items-baseline pt-3 border-t border-border">
+                <span className="text-[13px] text-text-tertiary">Total a pagar</span>
+                <span className="text-[16px] font-semibold text-text-secondary leading-none">
                   {formatSoles(installmentCalculation.totalWithInterest)}
                 </span>
               </div>

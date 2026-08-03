@@ -35,12 +35,20 @@ export function ProductPageClient({ product }: ProductPageClientProps) {
         onReserve={() => setModalOpen(true)}
         selectedInstallments={selectedInstallments}
         onInstallmentSelect={handleInstallmentSelect}
+        installmentCalculation={installmentCalculation}
       />
 
       <StickyBuyBar
         productName={product.title}
-        installmentAmount={installmentCalculation?.installmentAmount ?? product.installmentAmount}
+        firstPaymentAmount={
+          selectedInstallments === 1
+            ? product.priceTotal
+            : (product.downPayment > 0
+                ? product.downPayment
+                : (installmentCalculation?.installmentAmount ?? product.installmentAmount))
+        }
         installments={selectedInstallments}
+        downPayment={product.downPayment}
         onReserve={() => setModalOpen(true)}
         disabled={product.stock === 0}
       />

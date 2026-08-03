@@ -45,7 +45,7 @@ export function BreadcrumbSchema({ crumbs, className }: BreadcrumbSchemaProps) {
       <nav
         aria-label="Ruta de navegación"
         className={clsx(
-          'pt-[76px] pb-3', // 60px navbar + 16px spacing
+          'pt-[30px] md:pt-[76px] pb-3', // Mobile: 30px | Desktop: 76px (60px navbar + 16px)
           className
         )}
       >

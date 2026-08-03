@@ -22,10 +22,12 @@ import { formatSoles } from '@/lib/utils/currency';
 interface StickyBuyBarProps {
   /** Product name to show in the bar */
   productName: string;
-  /** Installment amount in soles */
-  installmentAmount: number;
+  /** First payment amount (down payment or first installment) */
+  firstPaymentAmount: number;
   /** Number of installments */
   installments: number;
+  /** Down payment amount (0 if none) */
+  downPayment: number;
   /** Href for the "Reservar" button — or a click handler */
   onReserve: () => void;
   /** Whether the button should be disabled (e.g. out of stock) */
@@ -36,8 +38,9 @@ const SCROLL_THRESHOLD = 600;
 
 export function StickyBuyBar({
   productName,
-  installmentAmount,
+  firstPaymentAmount,
   installments,
+  downPayment,
   onReserve,
   disabled = false,
 }: StickyBuyBarProps) {
@@ -84,10 +87,28 @@ export function StickyBuyBar({
             {productName}
           </span>
           <span className="text-[13px] text-text-secondary">
-            {installments} cuotas de{' '}
-            <span className="font-semibold text-text-primary">
-              {formatSoles(installmentAmount)}
-            </span>
+            {installments === 1 ? (
+              <>
+                Pago al contado:{' '}
+                <span className="font-semibold text-text-primary">
+                  {formatSoles(firstPaymentAmount)}
+                </span>
+              </>
+            ) : downPayment > 0 ? (
+              <>
+                Paga hoy:{' '}
+                <span className="font-semibold text-text-primary">
+                  {formatSoles(firstPaymentAmount)}
+                </span>
+              </>
+            ) : (
+              <>
+                Primera cuota:{' '}
+                <span className="font-semibold text-text-primary">
+                  {formatSoles(firstPaymentAmount)}
+                </span>
+              </>
+            )}
           </span>
         </div>
 

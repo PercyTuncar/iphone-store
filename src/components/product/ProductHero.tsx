@@ -21,13 +21,15 @@ interface ProductHeroProps {
   onReserve: () => void;
   selectedInstallments: number;
   onInstallmentSelect: (installments: number, calculation: InstallmentCalculation) => void;
+  installmentCalculation: InstallmentCalculation | null;
 }
 
 export function ProductHero({
   product,
   onReserve,
   selectedInstallments,
-  onInstallmentSelect
+  onInstallmentSelect,
+  installmentCalculation
 }: ProductHeroProps) {
   const images = product.images.length > 0 ? product.images : [product.thumbnailUrl];
   const [activeIdx, setActiveIdx] = useState(0);
@@ -130,16 +132,29 @@ export function ProductHero({
               onClick={onReserve}
               disabled={product.stock === 0}
               className={clsx(
-                'btn btn-primary w-full text-[17px] py-4',
+                'btn btn-primary w-full text-[17px] py-4 font-semibold',
                 product.stock === 0 && 'opacity-40 cursor-not-allowed'
               )}
             >
-              {product.stock === 0 ? 'Sin stock' : 'Reservar Ahora →'}
+              {product.stock === 0 ? 'Sin stock' : (() => {
+                if (selectedInstallments === 1) {
+                  // Pago al contado
+                  return `Comprar por S/ ${product.priceTotal.toFixed(2)}`;
+                }
+
+                // Pago en cuotas
+                const firstPayment = product.downPayment > 0
+                  ? product.downPayment
+                  : (installmentCalculation?.installmentAmount ?? product.installmentAmount);
+
+                return `Reservar con S/ ${firstPayment.toFixed(2)}`;
+              })()}
             </button>
 
             {product.stock > 0 && product.stock <= 5 && (
-              <p className="text-label text-warning text-center -mt-2">
-                ⚠️ Solo quedan {product.stock} unidades disponibles
+              <p className="text-label text-warning text-center -mt-2 flex items-center justify-center gap-1">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
+                Solo quedan {product.stock} unidades disponibles
               </p>
             )}
           </div>

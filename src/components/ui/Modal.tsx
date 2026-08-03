@@ -106,13 +106,13 @@ export function Modal({
           SIZE_CLASSES[size],
           // Animation: slide-up on mobile, scale-in on desktop
           'animate-slide-up sm:animate-scale-in',
-          // Padding
-          'px-6 pb-8 pt-6',
+          // Max height and scroll
+          'max-h-[90vh] flex flex-col',
           className
         )}
       >
-        {/* Header */}
-        <div className="flex items-start justify-between mb-5">
+        {/* Header - Fixed */}
+        <div className="flex items-start justify-between px-6 pt-6 pb-4 flex-shrink-0 border-b border-border">
           <div>
             {title && (
               <h2 id={titleId} className="text-subtitle">
@@ -141,7 +141,10 @@ export function Modal({
           </button>
         </div>
 
-        {children}
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 pb-24">
+          {children}
+        </div>
       </div>
     </div>
   );
