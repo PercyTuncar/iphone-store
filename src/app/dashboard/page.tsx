@@ -109,7 +109,7 @@ export default function DashboardPage() {
             <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
               <Package size={20} className="text-accent" />
             </div>
-            <Badge variant={activeOrders.length > 0 ? 'success' : 'secondary'} size="sm">
+            <Badge variant={activeOrders.length > 0 ? 'success' : 'neutral'}>
               {activeOrders.length > 0 ? 'Activo' : 'Sin pedidos'}
             </Badge>
           </div>
@@ -126,7 +126,7 @@ export default function DashboardPage() {
               <Clock size={20} className="text-warning" />
             </div>
             {pendingOrders.length > 0 && (
-              <Badge variant="warning" size="sm">
+              <Badge variant="warning">
                 Pendiente
               </Badge>
             )}
@@ -321,7 +321,7 @@ function OrderCard({ order }: { order: Order }) {
                 Pedido #{order.id.slice(0, 8)}
               </p>
             </div>
-            <Badge variant={statusToBadgeVariant[order.status] || 'secondary'} size="sm">
+            <Badge variant={statusToBadgeVariant(order.status)}>
               {STATUS_LABELS[order.status] || order.status}
             </Badge>
           </div>

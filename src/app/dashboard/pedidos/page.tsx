@@ -236,7 +236,7 @@ function OrderCard({ order }: { order: Order }) {
                   : 'Fecha no disponible'}
               </p>
             </div>
-            <Badge variant={statusToBadgeVariant[order.status] || 'secondary'} size="sm">
+            <Badge variant={statusToBadgeVariant(order.status)}>
               {STATUS_LABELS[order.status] || order.status}
             </Badge>
           </div>

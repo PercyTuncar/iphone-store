@@ -134,7 +134,7 @@ export default function PagosPage() {
                       Pedido #{order.id.slice(0, 8)}
                     </p>
                   </div>
-                  <Badge variant="warning" size="sm">
+                  <Badge variant="warning">
                     Pendiente
                   </Badge>
                 </div>
