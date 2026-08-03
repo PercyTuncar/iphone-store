@@ -5,10 +5,11 @@
  * Connects ProductHero + StickyBuyBar + real PaymentModal (Phase 6).
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ProductHero } from '@/components/product/ProductHero';
 import { StickyBuyBar } from '@/components/layout/StickyBuyBar';
 import { PaymentModal } from '@/components/product/PaymentModal';
+import { calculateInstallmentPlan } from '@/lib/utils/installments';
 import type { Product } from '@/types/product';
 import type { InstallmentCalculation } from '@/lib/utils/installments';
 
@@ -22,6 +23,17 @@ export function ProductPageClient({ product }: ProductPageClientProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedInstallments, setSelectedInstallments] = useState(product.installments);
   const [installmentCalculation, setInstallmentCalculation] = useState<InstallmentCalculation | null>(null);
+
+  // Calcular la cuota inicial al montar
+  useEffect(() => {
+    const calculation = calculateInstallmentPlan(
+      product.priceTotal,
+      product.interestRate * 100,
+      product.installments,
+      product.downPayment
+    );
+    setInstallmentCalculation(calculation);
+  }, [product.priceTotal, product.interestRate, product.installments, product.downPayment]);
 
   const handleInstallmentSelect = (installments: number, calculation: InstallmentCalculation) => {
     setSelectedInstallments(installments);
