@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { clsx } from 'clsx';
-import { ChevronRight, Package, Search } from 'lucide-react';
+import { ChevronRight, Clock, Package, Search } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { getOrdersByUser } from '@/lib/firebase/orders';
 import { Spinner } from '@/components/ui/Spinner';
