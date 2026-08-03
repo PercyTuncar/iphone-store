@@ -198,8 +198,11 @@ export function buildOrganizationSchema(policy?: StorePolicy) {
     image: `${SITE_URL}/og-default.jpg`,
     address: {
       '@type': 'PostalAddress',
-      addressCountry: 'PE',
+      streetAddress: 'Av. Santo Toribio 163',
+      addressLocality: 'San Isidro',
       addressRegion: 'Lima',
+      postalCode: '15073',
+      addressCountry: 'PE',
     },
     contactPoint: {
       '@type': 'ContactPoint',

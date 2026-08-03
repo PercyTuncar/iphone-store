@@ -31,6 +31,13 @@ export interface SiteSettings {
   contactPhone: string;
   contactEmail: string;
   whatsappNumber: string;
+  physicalAddress?: {
+    streetAddress: string;
+    addressLocality: string;
+    addressRegion: string;
+    postalCode: string;
+    addressCountry: string;
+  };
   socialMedia: {
     instagram?: string;
     facebook?: string;

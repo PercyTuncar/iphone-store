@@ -31,14 +31,19 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <p className="font-semibold text-[17px] mb-3">iPhone en Cuotas</p>
-            <p className="text-[14px] text-[#86868B] leading-relaxed max-w-[220px]">
+            <p className="text-[14px] text-[#86868B] leading-relaxed max-w-[220px] mb-4">
               Tu iPhone nuevo en cómodas cuotas. Sin banco. Sin tarjeta de crédito.
             </p>
+            <address className="text-[13px] text-[#86868B] not-italic leading-relaxed mb-4">
+              Av. Santo Toribio 163<br />
+              San Isidro, Lima 15073<br />
+              Perú
+            </address>
             <a
               href={`https://wa.me/${WHATSAPP}?text=Hola, quiero consultar sobre los iPhones en cuotas`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 mt-5 text-[14px] text-[#34C759] hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 mt-2 text-[14px] text-[#34C759] hover:text-white transition-colors"
             >
               {/* WhatsApp icon (inline SVG) */}
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
