@@ -12,6 +12,9 @@ import type { BlogPostCard } from '@/types/blog';
 export const metadata: Metadata = {
   title: 'Blog — iPhone en Cuotas',
   description: 'Guías, comparativas y novedades sobre iPhones en Perú. Aprende cómo comprar tu iPhone en cuotas sin tarjeta.',
+  alternates: {
+    canonical: '/blog',
+  },
 };
 
 export const revalidate = 3600;

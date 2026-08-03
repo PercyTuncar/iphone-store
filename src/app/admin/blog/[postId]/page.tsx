@@ -60,7 +60,7 @@ export default function AdminEditarPostPage() {
         metaTitle: meta.seoTitle || meta.title,
         metaDescription: meta.seoDescription,
         ogImage: meta.featuredImage,
-        canonicalUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://iphoneencuotas.com'}/blog/${meta.slug}`,
+        canonicalUrl: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.iphoneencuotas.com'}/blog/${meta.slug}`,
       },
     });
   }, [meta, postId]);

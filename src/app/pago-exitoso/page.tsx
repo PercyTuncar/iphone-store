@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { toast } from '@/components/ui/Toast';
+import { ClientMetadata } from '@/components/seo/ClientMetadata';
 import { uploadVoucher } from '@/lib/firebase/storage';
 import { createPayment } from '@/lib/firebase/payments';
 import { updateOrder } from '@/lib/firebase/orders';
@@ -25,9 +26,12 @@ const DEPARTMENTS = [
 
 export default function PagoExitosoPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-bg-secondary"><div className="h-8 w-8 border-2 border-accent border-t-transparent rounded-full animate-spin" /></div>}>
-      <PagoExitosoInner />
-    </Suspense>
+    <>
+      <ClientMetadata title="Pago Exitoso" noindex={true} />
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-bg-secondary"><div className="h-8 w-8 border-2 border-accent border-t-transparent rounded-full animate-spin" /></div>}>
+        <PagoExitosoInner />
+      </Suspense>
+    </>
   );
 }
 

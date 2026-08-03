@@ -55,6 +55,13 @@ interface FormState {
   condition: ProductCondition;
   grade: ProductGrade | '';
   stock: number;
+  // Section 1 – SEO/Schema fields (nuevos)
+  sku: string;
+  mpn: string;
+  gtin: string;
+  category: string;
+  googleProductCategoryId: string;
+  productGroupId: string;
   // Section 2 – Images (handled separately)
   // Section 3 – Pricing
   priceTotal: number;
@@ -109,6 +116,8 @@ interface FormState {
 const DEFAULT_STATE: FormState = {
   title: '', slug: '', model: 'iPhone 15 Pro Max', storage: '256GB',
   color: '', condition: 'new', grade: '', stock: 1,
+  sku: '', mpn: '', gtin: '', category: 'Celulares y Smartphones > iPhone',
+  googleProductCategoryId: '267', productGroupId: '',
   priceTotal: 0, installments: 12, interestRate: 5, downPayment: 0,
   penaltyTier1Days: 5, penaltyTier1Amount: 59,
   penaltyTier2Days: 10, penaltyTier2Amount: 79,
@@ -177,6 +186,13 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
       condition:      initialProduct.condition,
       grade:          initialProduct.grade ?? '',
       stock:          initialProduct.stock,
+      // Nuevos campos SEO/Schema (con fallbacks)
+      sku:            (initialProduct as any).sku || initialProduct.slug || '',
+      mpn:            (initialProduct as any).mpn || '',
+      gtin:           (initialProduct as any).gtin || '',
+      category:       (initialProduct as any).category || 'Celulares y Smartphones > iPhone',
+      googleProductCategoryId: (initialProduct as any).googleProductCategoryId || '267',
+      productGroupId: (initialProduct as any).productGroupId || slugify(initialProduct.model),
       priceTotal:     initialProduct.priceTotal,
       installments:   initialProduct.installments,
       interestRate:   initialProduct.interestRate * 100,
@@ -241,12 +257,18 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
       const next = { ...prev, [key]: val };
       if (key === 'title' && typeof val === 'string') {
         next.slug = slugify(val);
+        // Auto-generar SKU desde slug
+        next.sku = next.slug;
         if (!next.metaTitle)  next.metaTitle  = val as string;
         if (!next.h1)         next.h1         = val as string;
         if (!next.ogTitle)    next.ogTitle    = val as string;
         if (!next.twitterTitle) next.twitterTitle = val as string;
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://iphoneencuotas.com';
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.iphoneencuotas.com';
         next.canonicalUrl = `${siteUrl}/iphone/${next.slug}`;
+      }
+      // Auto-generar productGroupId desde model
+      if (key === 'model' && typeof val === 'string') {
+        next.productGroupId = slugify(val);
       }
       return next;
     });
@@ -275,9 +297,81 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
 
   // ── Submit ──
   const handleSubmit = async (status: 'draft' | 'published') => {
+    // Validación básica (siempre requerida)
     if (!form.title.trim()) { toast.error('El título es obligatorio.'); setActiveTab('1'); return; }
     if (!form.slug.trim())  { toast.error('El slug es obligatorio.'); setActiveTab('1'); return; }
     if (form.priceTotal <= 0) { toast.error('El precio total debe ser mayor a 0.'); setActiveTab('3'); return; }
+
+    // Validación completa SOLO al publicar (Bug #4 fix)
+    if (status === 'published') {
+      // Validar imágenes (mínimo 3, todas propias)
+      const validImages = images.filter(img =>
+        img.url && (
+          img.url.includes('firebasestorage.googleapis.com') ||
+          img.url.includes('storage.googleapis.com')
+        )
+      );
+
+      if (validImages.length < 3) {
+        toast.error('Debes subir al menos 3 imágenes propias (alojadas en Firebase Storage) antes de publicar.');
+        setActiveTab('2');
+        return;
+      }
+
+      // Validar URLs externas (Apple)
+      const hasExternalImages = images.some(img =>
+        img.url && (img.url.includes('apple.com') || img.url.includes('cdsassets.apple.com'))
+      );
+      if (hasExternalImages) {
+        toast.error('No puedes publicar con imágenes de Apple. Sube imágenes propias a Firebase Storage.');
+        setActiveTab('2');
+        return;
+      }
+
+      // Validar campos SEO obligatorios
+      if (!form.metaTitle.trim()) {
+        toast.error('El Meta Title es obligatorio para publicar.');
+        setActiveTab('8');
+        return;
+      }
+      if (form.metaTitle.length > 60) {
+        toast.error('El Meta Title debe tener máximo 60 caracteres.');
+        setActiveTab('8');
+        return;
+      }
+      if (!form.metaDescription.trim()) {
+        toast.error('La Meta Description es obligatoria para publicar.');
+        setActiveTab('8');
+        return;
+      }
+      if (form.metaDescription.length > 160) {
+        toast.error('La Meta Description debe tener máximo 160 caracteres.');
+        setActiveTab('8');
+        return;
+      }
+      if (!form.h1.trim()) {
+        toast.error('El H1 es obligatorio para publicar.');
+        setActiveTab('8');
+        return;
+      }
+      if (!form.canonicalUrl.trim()) {
+        toast.error('La Canonical URL es obligatoria para publicar.');
+        setActiveTab('8');
+        return;
+      }
+      if (!form.ogImage.trim()) {
+        toast.error('La Open Graph Image es obligatoria para publicar.');
+        setActiveTab('8');
+        return;
+      }
+
+      // Validar FAQ (mínimo 2 preguntas)
+      if (form.faqItems.length < 2) {
+        toast.error('Debes agregar al menos 2 preguntas frecuentes antes de publicar.');
+        setActiveTab('7');
+        return;
+      }
+    }
 
     setSaving(true);
     try {
@@ -424,6 +518,13 @@ function buildProductData(
     condition: form.condition,
     grade:     form.grade || null,
     stock:     form.stock,
+    // Nuevos campos SEO/Schema
+    sku:       form.sku,
+    mpn:       form.mpn || null,
+    gtin:      form.gtin || null,
+    category:  form.category,
+    googleProductCategoryId: form.googleProductCategoryId,
+    productGroupId: form.productGroupId,
     images:    imageUrls,
     thumbnailUrl: imageUrls[0] ?? '',
     priceTotal:   form.priceTotal,
@@ -946,6 +1047,16 @@ function Section1BasicInfo({
           </p>
         </div>
         <div>
+          <Label>SKU (auto-generado)</Label>
+          <input className="input mt-1 font-mono text-[15px] bg-bg-secondary"
+            value={form.sku}
+            readOnly
+            placeholder="Se genera automáticamente desde el slug" />
+          <p className="text-caption text-text-secondary mt-1">
+            Identificador único para Merchant Center
+          </p>
+        </div>
+        <div>
           <Label>Modelo</Label>
           <select className="input mt-1" value={form.model}
             onChange={e => setField('model', e.target.value)}>
@@ -993,6 +1104,59 @@ function Section1BasicInfo({
           <Label>Stock disponible</Label>
           <input type="number" min="0" className="input mt-1" value={form.stock}
             onChange={e => setField('stock', parseInt(e.target.value) || 0)} />
+        </div>
+
+        {/* Campos SEO/Schema (nuevos) */}
+        <div className="sm:col-span-2 border-t border-border pt-4 mt-2">
+          <h3 className="text-[15px] font-semibold mb-3">Datos para Google Shopping</h3>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <Label>Categoría Google *</Label>
+              <input className="input mt-1" value={form.category}
+                onChange={e => setField('category', e.target.value)}
+                placeholder="Celulares y Smartphones > iPhone" />
+              <p className="text-caption text-text-secondary mt-1">
+                Categoría de producto para feed de Merchant Center
+              </p>
+            </div>
+            <div>
+              <Label>Google Product Category ID</Label>
+              <input className="input mt-1 font-mono text-[15px]" value={form.googleProductCategoryId}
+                onChange={e => setField('googleProductCategoryId', e.target.value)}
+                placeholder="267" />
+              <p className="text-caption text-text-secondary mt-1">
+                ID de taxonomía de Google (267 = Mobile Phones)
+              </p>
+            </div>
+            <div>
+              <Label>Product Group ID (auto-generado)</Label>
+              <input className="input mt-1 font-mono text-[15px] bg-bg-secondary"
+                value={form.productGroupId}
+                readOnly
+                placeholder="Se genera desde el modelo" />
+              <p className="text-caption text-text-secondary mt-1">
+                Agrupa variantes del mismo modelo (color/almacenamiento)
+              </p>
+            </div>
+            <div>
+              <Label>MPN (Manufacturer Part Number)</Label>
+              <input className="input mt-1 font-mono text-[15px]" value={form.mpn}
+                onChange={e => setField('mpn', e.target.value)}
+                placeholder="Opcional - ej: MLX33LL/A" />
+              <p className="text-caption text-text-secondary mt-1">
+                Número de parte de Apple (opcional)
+              </p>
+            </div>
+            <div>
+              <Label>GTIN / EAN / UPC</Label>
+              <input className="input mt-1 font-mono text-[15px]" value={form.gtin}
+                onChange={e => setField('gtin', e.target.value)}
+                placeholder="Opcional - solo si tienes el real" />
+              <p className="text-caption text-text-secondary mt-1">
+                ⚠️ NO inventes valores - deja vacío si no tienes el código real
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

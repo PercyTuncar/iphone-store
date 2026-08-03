@@ -33,7 +33,7 @@ export async function actionSendAbandonmentReminders(
   const { adminId, adminEmail, recipients, messageTemplate } = payload;
   const apiKey = process.env.EMAIL_SERVICE_API_KEY;
   const fromEmail = process.env.EMAIL_FROM ?? 'noreply@iphoneencuotas.com';
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://iphoneencuotas.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.iphoneencuotas.com';
 
   if (!apiKey) {
     console.warn('[actionSendAbandonmentReminders] EMAIL_SERVICE_API_KEY not set — mock mode');

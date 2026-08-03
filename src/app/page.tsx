@@ -1,10 +1,3 @@
-/**
- * Home Page (/)
- *
- * Server Component — fetches published products + featured reviews from Firestore.
- * Sections: Hero · Models Grid · How It Works · Trust Pillars · Testimonials
- */
-
 import type React from 'react';
 import Link from 'next/link';
 import {
@@ -17,11 +10,18 @@ import { AppImage } from '@/components/ui/AppImage';
 import { Badge } from '@/components/ui/Badge';
 import { formatSoles } from '@/lib/utils/currency';
 import { JsonLd } from '@/components/seo/JsonLd';
-import { buildOrganizationSchema } from '@/lib/utils/schema';
+import { buildOrganizationSchema, buildWebsiteSchema } from '@/lib/utils/schema';
 import type { ProductCard } from '@/types/product';
 import type { Review } from '@/types/review';
+import type { Metadata } from 'next';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300; // ISR cada 5 minutos (Bug #3 fix)
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: '/',
+  },
+};
 
 export default async function HomePage() {
   const [products, reviews] = await Promise.all([
@@ -32,6 +32,7 @@ export default async function HomePage() {
   return (
     <>
       <JsonLd data={buildOrganizationSchema()} />
+      <JsonLd data={buildWebsiteSchema()} />
 
       {/* ══════════════════════════════════════════════
           HERO — 100vh, iPhone image + main CTA
@@ -68,7 +69,7 @@ export default async function HomePage() {
 
               <div className="flex flex-wrap gap-3">
                 <Link
-                  href="/#modelos"
+                  href="/iphone-en-cuotas"
                   className="btn btn-primary text-[17px] px-8 py-3.5"
                 >
                   Ver modelos disponibles

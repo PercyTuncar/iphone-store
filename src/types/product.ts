@@ -54,6 +54,14 @@ export interface Product {
   grade: ProductGrade | null; // null for new devices
   stock: number;
 
+  // SEO & Schema fields (nuevos - requeridos para Google)
+  sku: string; // identificador único interno
+  mpn: string | null; // Manufacturer Part Number (opcional)
+  gtin: string | null; // código de barras global (opcional, no inventar)
+  category: string; // ej. "Celulares y Smartphones > iPhone"
+  googleProductCategoryId: string; // ej. "267" (Google Product Taxonomy)
+  productGroupId: string; // mismo valor para todas las variantes de color/capacidad
+
   // Images
   images: string[];
   thumbnailUrl: string;

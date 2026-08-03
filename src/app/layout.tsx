@@ -15,7 +15,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://iphoneencuotas.com'
+    process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.iphoneencuotas.com'
   ),
   title: {
     default: 'iPhone en Cuotas — Compra tu iPhone en cuotas sin tarjeta en Perú',
@@ -30,6 +30,9 @@ export const metadata: Metadata = {
     'iphone a plazos',
     'iphone cuotas yape',
   ],
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
     siteName: 'iPhone en Cuotas',
     locale: 'es_PE',

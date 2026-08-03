@@ -7,6 +7,7 @@ import { clsx } from 'clsx';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Spinner } from '@/components/ui/Spinner';
 import { toast } from '@/components/ui/Toast';
+import { ClientMetadata } from '@/components/seo/ClientMetadata';
 import Link from 'next/link';
 
 function isMobile(): boolean {
@@ -16,9 +17,12 @@ function isMobile(): boolean {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-bg-secondary"><div className="h-8 w-8 border-2 border-accent border-t-transparent rounded-full animate-spin" /></div>}>
-      <LoginInner />
-    </Suspense>
+    <>
+      <ClientMetadata title="Iniciar Sesión" noindex={true} />
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-bg-secondary"><div className="h-8 w-8 border-2 border-accent border-t-transparent rounded-full animate-spin" /></div>}>
+        <LoginInner />
+      </Suspense>
+    </>
   );
 }
 

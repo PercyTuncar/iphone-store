@@ -72,7 +72,7 @@ export default async function BlogPostPage({ params }: Props) {
   const post = await getPostBySlug(slug);
   if (!post) notFound();
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://iphoneencuotas.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.iphoneencuotas.com';
 
   // Related product for the conversion widget
   const relatedProduct = post.relatedProductSlug

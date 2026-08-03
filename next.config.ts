@@ -16,14 +16,6 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'storage.googleapis.com',
       },
-      {
-        protocol: 'https',
-        hostname: 'www.apple.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'cdsassets.apple.com',
-      },
     ],
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
@@ -54,7 +46,20 @@ const nextConfig: NextConfig = {
   },
 
   async redirects() {
-    return [];
+    return [
+      // Bug #1 fix: Forzar dominio canónico con www
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'iphoneencuotas.com',
+          },
+        ],
+        destination: 'https://www.iphoneencuotas.com/:path*',
+        permanent: true,
+      },
+    ];
   },
 
   // Enable React strict mode for better development warnings

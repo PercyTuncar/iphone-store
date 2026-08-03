@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   title: 'Términos y Condiciones',
   description:
     'Conoce las condiciones de compra, política de penalidades, seguros de prórroga y política de no devolución de iPhone en Cuotas.',
+  alternates: {
+    canonical: '/terminos',
+  },
   robots: { index: true, follow: true },
 };
 

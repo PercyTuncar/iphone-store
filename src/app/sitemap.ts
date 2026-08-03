@@ -5,7 +5,7 @@ import { getAllPublishedPosts } from '@/lib/firebase/blog';
 export const revalidate = 3600; // regenerate every hour
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://iphoneencuotas.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.iphoneencuotas.com';
 
   // Static URLs always present
   const staticUrls: MetadataRoute.Sitemap = [
@@ -14,6 +14,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 1,
+    },
+    {
+      url: `${siteUrl}/iphone-en-cuotas`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.95,
     },
     {
       url: `${siteUrl}/blog`,
@@ -35,7 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const products = await getAllPublishedProducts();
     productUrls = products.map((p) => ({
       url: `${siteUrl}/iphone/${p.slug}`,
-      lastModified: new Date(),
+      lastModified: new Date(), // TODO: usar p.updatedAt cuando esté disponible en ProductCard
       changeFrequency: 'weekly' as const,
       priority: 0.9,
     }));

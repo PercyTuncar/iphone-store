@@ -4,7 +4,7 @@
 
 import type { Metadata } from 'next';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://iphoneencuotas.com';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.iphoneencuotas.com';
 const SITE_NAME = 'iPhone en Cuotas';
 
 interface BuildMetadataOptions {

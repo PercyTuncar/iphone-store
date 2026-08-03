@@ -74,7 +74,7 @@ export default async function IPhoneProductPage({ params }: Props) {
     return rest;
   })();
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://iphoneencuotas.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.iphoneencuotas.com';
 
   return (
     <>
@@ -82,9 +82,9 @@ export default async function IPhoneProductPage({ params }: Props) {
       <JsonLd data={buildProductSchema(product, reviews)} />
       <BreadcrumbSchema
         crumbs={[
-          { name: 'Inicio',   url: '/' },
-          { name: 'iPhones',  url: '/#modelos' },
-          { name: product.model, url: `/iphone/${slug}` },
+          { name: 'Inicio',   url: siteUrl },
+          { name: 'iPhone en Cuotas',  url: `${siteUrl}/iphone-en-cuotas` },
+          { name: product.model, url: `${siteUrl}/iphone/${slug}` },
         ]}
         className="container-main pt-4 pb-0"
       />

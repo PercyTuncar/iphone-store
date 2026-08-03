@@ -27,7 +27,7 @@ interface BreadcrumbSchemaProps {
 }
 
 export function BreadcrumbSchema({ crumbs, className }: BreadcrumbSchemaProps) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://iphoneencuotas.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.iphoneencuotas.com';
 
   // Build absolute URLs for the schema
   const absoluteCrumbs = crumbs.map((c) => ({

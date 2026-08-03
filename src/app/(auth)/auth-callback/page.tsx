@@ -8,12 +8,16 @@ import { auth } from '@/lib/firebase/config';
 import { ensureUserDocument } from '@/lib/firebase/auth';
 import { Spinner } from '@/components/ui/Spinner';
 import { toast } from '@/components/ui/Toast';
+import { ClientMetadata } from '@/components/seo/ClientMetadata';
 
 export default function AuthCallbackPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-bg-secondary"><div className="h-8 w-8 border-2 border-accent border-t-transparent rounded-full animate-spin" /></div>}>
-      <AuthCallbackInner />
-    </Suspense>
+    <>
+      <ClientMetadata title="Autenticando" noindex={true} />
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-bg-secondary"><div className="h-8 w-8 border-2 border-accent border-t-transparent rounded-full animate-spin" /></div>}>
+        <AuthCallbackInner />
+      </Suspense>
+    </>
   );
 }
 
