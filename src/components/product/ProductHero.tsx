@@ -12,15 +12,23 @@ import { useState } from 'react';
 import { clsx } from 'clsx';
 import { AppImage } from '@/components/ui/AppImage';
 import { Badge } from '@/components/ui/Badge';
-import { InstallmentPreview } from './InstallmentPreview';
+import { InstallmentSelector } from './InstallmentSelector';
 import type { Product, ProductClient } from '@/types/product';
+import type { InstallmentCalculation } from '@/lib/utils/installments';
 
 interface ProductHeroProps {
   product: Product | ProductClient;
   onReserve: () => void;
+  selectedInstallments: number;
+  onInstallmentSelect: (installments: number, calculation: InstallmentCalculation) => void;
 }
 
-export function ProductHero({ product, onReserve }: ProductHeroProps) {
+export function ProductHero({
+  product,
+  onReserve,
+  selectedInstallments,
+  onInstallmentSelect
+}: ProductHeroProps) {
   const images = product.images.length > 0 ? product.images : [product.thumbnailUrl];
   const [activeIdx, setActiveIdx] = useState(0);
 
@@ -110,12 +118,11 @@ export function ProductHero({ product, onReserve }: ProductHeroProps) {
               </div>
             )}
 
-            {/* Installment preview */}
-            <InstallmentPreview
-              installments={product.installments}
-              installmentAmount={product.installmentAmount}
-              priceTotal={product.priceTotal}
-              downPayment={product.downPayment}
+            {/* Installment Selector */}
+            <InstallmentSelector
+              product={product}
+              selectedInstallments={selectedInstallments}
+              onSelect={onInstallmentSelect}
             />
 
             {/* CTA */}

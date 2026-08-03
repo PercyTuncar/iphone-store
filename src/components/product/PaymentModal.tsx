@@ -34,6 +34,8 @@ import { getShippingCost } from '@/lib/firebase/shipping';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Timestamp } from 'firebase/firestore';
 import type { ProductClient } from '@/types/product';
+import type { InstallmentCalculation } from '@/lib/utils/installments';
+import { calculateInstallmentPlan } from '@/lib/utils/installments';
 
 type PaymentMethod = 'online' | 'offline' | null;
 
@@ -46,9 +48,17 @@ interface PaymentModalProps {
   open: boolean;
   onClose: () => void;
   product: ProductClient;
+  selectedInstallments: number;
+  installmentCalculation: InstallmentCalculation | null;
 }
 
-export function PaymentModal({ open, onClose, product }: PaymentModalProps) {
+export function PaymentModal({
+  open,
+  onClose,
+  product,
+  selectedInstallments,
+  installmentCalculation
+}: PaymentModalProps) {
   const router = useRouter();
   const { firebaseUser } = useAuth();
 
@@ -57,8 +67,8 @@ export function PaymentModal({ open, onClose, product }: PaymentModalProps) {
   const [termsAccepted, setTermsAccepted]           = useState(false);
 
   // Reactive total: first installment + optional insurance + shipping (calculated later)
-  const baseAmount     = product.installments > 0
-    ? product.installmentAmount
+  const baseAmount     = selectedInstallments > 0
+    ? (installmentCalculation?.installmentAmount ?? product.installmentAmount)
     : product.priceTotal;
   const insuranceExtra = insuranceSelected ? product.insuranceCheckoutDiscount1Month : 0;
   const amountDue      = baseAmount + insuranceExtra;
@@ -81,6 +91,14 @@ export function PaymentModal({ open, onClose, product }: PaymentModalProps) {
     const shippingCost = await getShippingCost(shipping.department);
     const reservedUntil = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
 
+    // Calcular cuotas basado en la selección del usuario
+    const calculation = installmentCalculation || calculateInstallmentPlan(
+      product.priceTotal,
+      product.interestRate * 100,
+      selectedInstallments,
+      product.downPayment
+    );
+
     const orderId = await createOrder({
       userId:           firebaseUser.uid,
       productId:        product.id,
@@ -99,8 +117,8 @@ export function PaymentModal({ open, onClose, product }: PaymentModalProps) {
       },
       shippingCost,
       priceTotal:        product.priceTotal,
-      installments:      product.installments,
-      installmentAmount: product.installmentAmount,
+      installments:      selectedInstallments,
+      installmentAmount: calculation.installmentAmount,
       downPayment:       product.downPayment,
       status:            'pending_first_payment',
       paymentMethod:     paymentMethodType,
@@ -187,18 +205,93 @@ export function PaymentModal({ open, onClose, product }: PaymentModalProps) {
     >
       <div className="space-y-5">
         {/* ── Product summary ── */}
-        <div className="flex items-center gap-3 p-3 bg-bg-secondary rounded-[10px]">
-          <img
-            src={product.thumbnailUrl || '/og-default.jpg'}
-            alt={product.title}
-            className="w-12 h-12 object-contain rounded-[8px] bg-bg-primary"
-          />
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-[15px] truncate">{product.title}</p>
-            <p className="text-caption text-text-secondary">
-              {product.installments} cuotas · {formatSoles(product.installmentAmount)}/mes
-            </p>
+        <div className="rounded-[16px] bg-gradient-to-br from-bg-secondary to-bg-tertiary border border-border shadow-sm overflow-hidden">
+          {/* Product header */}
+          <div className="flex items-center gap-3 p-4 bg-bg-primary/50 backdrop-blur-sm">
+            <div className="w-16 h-16 rounded-[12px] bg-bg-secondary border border-border overflow-hidden flex-shrink-0">
+              <img
+                src={product.thumbnailUrl || '/og-default.jpg'}
+                alt={product.title}
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-[15px] text-text-primary truncate">{product.title}</p>
+              <p className="text-[13px] text-text-secondary mt-0.5">
+                {selectedInstallments === 1
+                  ? '💳 Pago único al contado'
+                  : `📅 ${selectedInstallments} cuotas mensuales`}
+              </p>
+            </div>
           </div>
+
+          {/* Installment details */}
+          {selectedInstallments > 1 && installmentCalculation && (
+            <div className="p-4 space-y-2.5 text-[14px]">
+              {/* Primera cuota */}
+              <div className="flex justify-between items-center py-2 border-b border-border/50">
+                <div>
+                  <p className="font-medium text-text-primary">
+                    {product.downPayment > 0 ? 'Paga hoy (1ª cuota)' : 'Primera cuota'}
+                  </p>
+                  <p className="text-[12px] text-text-tertiary">Al reservar</p>
+                </div>
+                <span className="text-[20px] font-bold text-accent">
+                  {formatSoles(product.downPayment > 0 ? product.downPayment : installmentCalculation.installmentAmount)}
+                </span>
+              </div>
+
+              {/* Cuotas restantes */}
+              {product.downPayment > 0 && (
+                <div className="flex justify-between items-center py-2 border-b border-border/50">
+                  <div>
+                    <p className="font-medium text-text-primary">Cuotas 2-{selectedInstallments}</p>
+                    <p className="text-[12px] text-text-tertiary">{selectedInstallments - 1} pagos mensuales</p>
+                  </div>
+                  <span className="text-[20px] font-bold text-accent">
+                    {formatSoles(installmentCalculation.installmentAmount)}
+                  </span>
+                </div>
+              )}
+
+              {/* Precio del producto */}
+              <div className="flex justify-between items-center py-2">
+                <span className="text-text-secondary">Precio del producto</span>
+                <span className="font-medium text-text-secondary">{formatSoles(product.priceTotal)}</span>
+              </div>
+
+              {/* Interés */}
+              {installmentCalculation.totalInterest > 0 && (
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-text-secondary">Interés financiero</span>
+                  <span className="font-medium text-warning">+{formatSoles(installmentCalculation.totalInterest)}</span>
+                </div>
+              )}
+
+              {/* Total */}
+              <div className="flex justify-between items-baseline pt-3 border-t-2 border-border">
+                <span className="text-[15px] font-semibold text-text-primary">Total a pagar</span>
+                <span className="text-[24px] font-bold text-accent leading-none">
+                  {formatSoles(installmentCalculation.totalWithInterest)}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Contado details */}
+          {selectedInstallments === 1 && (
+            <div className="p-4">
+              <div className="flex justify-between items-center py-3 px-4 rounded-[12px] bg-success/5 border border-success/20">
+                <div>
+                  <p className="font-semibold text-success">Pago único</p>
+                  <p className="text-[12px] text-success/70">Sin intereses ni cargos</p>
+                </div>
+                <span className="text-[28px] font-bold text-success leading-none">
+                  {formatSoles(product.priceTotal)}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Insurance upsell ── */}

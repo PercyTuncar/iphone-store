@@ -10,6 +10,7 @@ import { ProductHero } from '@/components/product/ProductHero';
 import { StickyBuyBar } from '@/components/layout/StickyBuyBar';
 import { PaymentModal } from '@/components/product/PaymentModal';
 import type { Product } from '@/types/product';
+import type { InstallmentCalculation } from '@/lib/utils/installments';
 
 type ProductClient = Omit<Product, 'createdAt' | 'updatedAt' | 'publishedAt'>;
 
@@ -19,15 +20,27 @@ interface ProductPageClientProps {
 
 export function ProductPageClient({ product }: ProductPageClientProps) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedInstallments, setSelectedInstallments] = useState(product.installments);
+  const [installmentCalculation, setInstallmentCalculation] = useState<InstallmentCalculation | null>(null);
+
+  const handleInstallmentSelect = (installments: number, calculation: InstallmentCalculation) => {
+    setSelectedInstallments(installments);
+    setInstallmentCalculation(calculation);
+  };
 
   return (
     <>
-      <ProductHero product={product} onReserve={() => setModalOpen(true)} />
+      <ProductHero
+        product={product}
+        onReserve={() => setModalOpen(true)}
+        selectedInstallments={selectedInstallments}
+        onInstallmentSelect={handleInstallmentSelect}
+      />
 
       <StickyBuyBar
         productName={product.title}
-        installmentAmount={product.installmentAmount}
-        installments={product.installments}
+        installmentAmount={installmentCalculation?.installmentAmount ?? product.installmentAmount}
+        installments={selectedInstallments}
         onReserve={() => setModalOpen(true)}
         disabled={product.stock === 0}
       />
@@ -36,6 +49,8 @@ export function ProductPageClient({ product }: ProductPageClientProps) {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         product={product}
+        selectedInstallments={selectedInstallments}
+        installmentCalculation={installmentCalculation}
       />
     </>
   );
