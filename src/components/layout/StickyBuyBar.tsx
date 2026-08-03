@@ -66,21 +66,22 @@ export function StickyBuyBar({
       role="complementary"
       aria-label="Compra rápida"
       className={clsx(
-        // Position — bottom on mobile (above BottomTabBar), top on desktop
-        'fixed z-40 left-0 right-0',
-        'bottom-16 md:bottom-auto md:top-14', // 64px above BottomTabBar on mobile
-        // Glassmorphism
-        'glass border-t md:border-t-0 md:border-b border-white/10',
+        // Position — bottom on both mobile and desktop (floating card style)
+        'fixed z-40',
+        'bottom-16 md:bottom-6', // Above BottomTabBar on mobile, floating on desktop
+        'left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-3xl',
+        // Glassmorphism + rounded on desktop
+        'glass border-t md:border md:rounded-[20px] md:shadow-2xl border-white/10',
         // Animation
         'transition-all duration-300 ease-out',
         visible
           ? 'opacity-100 translate-y-0'
-          : 'opacity-0 translate-y-4 md:-translate-y-4 pointer-events-none',
+          : 'opacity-0 translate-y-4 pointer-events-none',
         // Height
-        'h-14'
+        'h-14 md:h-auto md:py-3'
       )}
     >
-      <div className="container-main flex items-center justify-between h-full">
+      <div className="container-main md:px-6 flex items-center justify-between h-full gap-4">
         {/* Product info */}
         <div className="flex flex-col">
           <span className="text-label font-semibold text-text-primary line-clamp-1 hidden sm:block">
