@@ -32,9 +32,11 @@ export default function PagosPage() {
     if (authLoading) return;
     if (!firebaseUser) return;
 
+    const uid = firebaseUser.uid; // Guardar el uid antes de la función async
+
     async function loadOrders() {
       try {
-        const data = await getOrdersByUser(firebaseUser.uid);
+        const data = await getOrdersByUser(uid);
         setOrders(data);
       } catch (error) {
         console.error('Error loading orders:', error);

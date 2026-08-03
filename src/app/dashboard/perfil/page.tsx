@@ -99,7 +99,7 @@ export default function PerfilPage() {
   // ── Subir foto de perfil ──────────────────────────────────
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !firebaseUser) return;
     if (file.size > 5 * 1024 * 1024) {
       toast.error('La foto no debe superar los 5 MB.');
       return;
@@ -121,7 +121,7 @@ export default function PerfilPage() {
   // ── Guardar perfil ────────────────────────────────────────
   const handleSave = async (ev: React.FormEvent) => {
     ev.preventDefault();
-    if (!validate()) return;
+    if (!validate() || !firebaseUser) return;
     setSaving(true);
     try {
       await updateUserProfile(firebaseUser.uid, {
