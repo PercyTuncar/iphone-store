@@ -424,17 +424,24 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
       const data = buildProductData(form, uploadedImages, status);
 
       if (isEditing && productId) {
-        await updateProduct(productId, { ...data });
+        // Al editar, solo actualizar publishedAt si cambiamos de draft a published
+        if (initialProduct && initialProduct.status !== 'published' && status === 'published') {
+          await updateProduct(productId, { ...data, publishedAt: serverTimestamp() });
+        } else {
+          await updateProduct(productId, { ...data });
+        }
         toast.success(status === 'published' ? 'Producto publicado.' : 'Cambios guardados.');
       } else {
-        const id = await createProduct({
+        // Al crear, siempre incluir publishedAt si se publica directamente
+        const newProductData = {
           ...data,
           status,
           averageRating: 0,
           reviewCount: 0,
-        });
+          ...(status === 'published' ? { publishedAt: serverTimestamp() } : {}),
+        };
+        const id = await createProduct(newProductData);
         setProductId(id);
-        // Re-upload if we used 'temp' as productId
         toast.success(status === 'published' ? 'Producto publicado.' : 'Guardado como borrador.');
       }
       router.push('/admin/productos');
@@ -623,8 +630,7 @@ function buildProductData(
       howItWorks:      form.howItWorks,
       faqItems: form.faqItems.map(f => ({ question: f.question, answer: f.answer })),
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    publishedAt: status === 'published' ? serverTimestamp() as any : null,
+    // NO incluir publishedAt aquí - se maneja en handleSubmit para no sobrescribir fecha original
   };
 }
 
