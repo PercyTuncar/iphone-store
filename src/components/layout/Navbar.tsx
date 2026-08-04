@@ -8,6 +8,8 @@
  * 1. Transparent  — scroll = 0, nav overlays hero content
  * 2. Glass premium — scroll > 50px, backdrop-filter blur + saturation
  * 3. Solid light   — /admin and /dashboard routes always solid
+ *
+ * Products are loaded dynamically from Firestore on mount to avoid 404 links.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -20,19 +22,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { AppImage } from '@/components/ui/AppImage';
+import { getAllPublishedProducts } from '@/lib/firebase/products';
 
-// ─── iPhone dropdown data ────────────────────────────────────
-const IPHONE_MENU = [
-  { label: 'iPhone 17 Pro Max', slug: 'iphone-17-pro-max' },
-  { label: 'iPhone 17 Pro',     slug: 'iphone-17-pro' },
-  { label: 'iPhone 16 Pro Max', slug: 'iphone-16-pro-max' },
-  { label: 'iPhone 16 Pro',     slug: 'iphone-16-pro' },
-  { label: 'iPhone 15 Pro Max', slug: 'iphone-15-pro-max' },
-  { label: 'iPhone 15 Pro',     slug: 'iphone-15-pro' },
-  { label: 'iPhone 15',         slug: 'iphone-15' },
-  { label: 'iPhone 14 Pro Max', slug: 'iphone-14-pro-max' },
-  { label: 'iPhone 13',         slug: 'iphone-13' },
-];
+interface NavProduct {
+  label: string;
+  slug: string;
+}
 
 export function Navbar() {
   const pathname = usePathname();
@@ -42,9 +37,56 @@ export function Navbar() {
   const [scrolled,   setScrolled]   = useState(false);
   const [iphoneOpen, setIphoneOpen] = useState(false);
   const [userOpen,   setUserOpen]   = useState(false);
+  const [iphoneMenu, setIphoneMenu] = useState<NavProduct[]>([]);
 
   const iphoneRef = useRef<HTMLDivElement>(null);
   const userRef   = useRef<HTMLDivElement>(null);
+
+  // ── Load products dynamically on mount ──────────────────────
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const products = await getAllPublishedProducts();
+        const navProducts = products.map((p) => ({
+          label: p.title,
+          slug: p.slug,
+        }));
+
+        // Sort by model priority (Pro Max > Pro > regular, newer > older)
+        const modelPriority: Record<string, number> = {
+          '17 Pro Max': 10,
+          '17 Pro': 9,
+          '16 Pro Max': 8,
+          '16 Pro': 7,
+          '15 Pro Max': 6,
+          '15 Pro': 5,
+          '15': 4,
+          '14 Pro Max': 3,
+          '14': 2,
+          '13': 1,
+        };
+
+        navProducts.sort((a, b) => {
+          const priorityA = Object.entries(modelPriority).find(([key]) =>
+            a.label.toLowerCase().includes(key.toLowerCase())
+          )?.[1] ?? 0;
+
+          const priorityB = Object.entries(modelPriority).find(([key]) =>
+            b.label.toLowerCase().includes(key.toLowerCase())
+          )?.[1] ?? 0;
+
+          return priorityB - priorityA;
+        });
+
+        setIphoneMenu(navProducts);
+      } catch (error) {
+        console.error('[Navbar] Error loading products:', error);
+        // Keep empty array on error - graceful degradation
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   // ── Scroll listener ──────────────────────────────────────
   useEffect(() => {
@@ -157,23 +199,29 @@ export function Navbar() {
                   )}
                   role="menu"
                 >
-                  {IPHONE_MENU.map((item) => (
-                    <Link
-                      key={item.slug}
-                      href={`/iphone/${item.slug}`}
-                      role="menuitem"
-                      className={clsx(
-                        'flex items-center gap-2.5 px-4 py-2.5 text-[15px]',
-                        'transition-colors duration-100',
-                        pathname === `/iphone/${item.slug}`
-                          ? 'text-accent font-semibold bg-accent/8'
-                          : 'text-text-primary hover:bg-[#F2F2F7]'
-                      )}
-                    >
-                      <Smartphone size={13} className="text-text-tertiary flex-shrink-0" aria-hidden="true" />
-                      {item.label}
-                    </Link>
-                  ))}
+                  {iphoneMenu.length > 0 ? (
+                    iphoneMenu.map((item) => (
+                      <Link
+                        key={item.slug}
+                        href={`/iphone/${item.slug}`}
+                        role="menuitem"
+                        className={clsx(
+                          'flex items-center gap-2.5 px-4 py-2.5 text-[15px]',
+                          'transition-colors duration-100',
+                          pathname === `/iphone/${item.slug}`
+                            ? 'text-accent font-semibold bg-accent/8'
+                            : 'text-text-primary hover:bg-[#F2F2F7]'
+                        )}
+                      >
+                        <Smartphone size={13} className="text-text-tertiary flex-shrink-0" aria-hidden="true" />
+                        {item.label}
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="px-4 py-2.5 text-[15px] text-text-tertiary">
+                      Cargando modelos...
+                    </div>
+                  )}
                   <div className="h-px bg-[#E5E5EA] mx-3 my-1" />
                   <Link
                     href="/#modelos"

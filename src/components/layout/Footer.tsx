@@ -2,24 +2,18 @@
  * Footer — global footer for the public site.
  * Dark background (#1D1D1F), Apple-style layout.
  * Server Component — no client state needed.
+ *
+ * Products are fetched dynamically from Firestore to avoid dead 404 links.
  */
 
 import Link from 'next/link';
-import { IPHONE_MODELS } from '@/lib/constants/iphone-models';
+import { getNavigationProducts } from '@/lib/navigation/products';
 
 const WHATSAPP = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '51944784488';
 
-const FEATURED_MODELS = [
-  { label: 'iPhone 17 Pro Max', slug: 'iphone-17-pro-max' },
-  { label: 'iPhone 16 Pro Max', slug: 'iphone-16-pro-max' },
-  { label: 'iPhone 15 Pro Max', slug: 'iphone-15-pro-max' },
-  { label: 'iPhone 15 Pro',     slug: 'iphone-15-pro' },
-  { label: 'iPhone 15',         slug: 'iphone-15' },
-  { label: 'iPhone 14 Pro Max', slug: 'iphone-14-pro-max' },
-  { label: 'iPhone 13',         slug: 'iphone-13' },
-];
-
-export function Footer() {
+export async function Footer() {
+  // Fetch published products dynamically to avoid 404 links
+  const featuredModels = await getNavigationProducts();
   const year = new Date().getFullYear();
 
   return (
@@ -60,16 +54,22 @@ export function Footer() {
               iPhones
             </h3>
             <ul className="space-y-2.5">
-              {FEATURED_MODELS.map((m) => (
-                <li key={m.slug}>
-                  <Link
-                    href={`/iphone/${m.slug}`}
-                    className="text-[14px] text-[#A1A1A6] hover:text-white transition-colors"
-                  >
-                    {m.label}
-                  </Link>
+              {featuredModels.length > 0 ? (
+                featuredModels.map((m) => (
+                  <li key={m.slug}>
+                    <Link
+                      href={`/iphone/${m.slug}`}
+                      className="text-[14px] text-[#A1A1A6] hover:text-white transition-colors"
+                    >
+                      {m.label}
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                <li className="text-[14px] text-[#A1A1A6]">
+                  Cargando modelos...
                 </li>
-              ))}
+              )}
             </ul>
           </div>
 

@@ -7,7 +7,7 @@
  *
  * Tabs:
  *  1. Inicio   — /
- *  2. iPhones  — opens a bottom sheet with model list
+ *  2. iPhones  — opens a bottom sheet with model list (loaded dynamically from Firestore)
  *  3. Perfil   — shows user name when logged in, /dashboard or /login
  *  4. Blog     — /blog
  *  5. Más      — opens menu with additional options (role-based)
@@ -35,18 +35,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { AppImage } from '@/components/ui/AppImage';
+import { getAllPublishedProducts } from '@/lib/firebase/products';
 
-const IPHONE_MENU = [
-  { label: 'iPhone 17 Pro Max', slug: 'iphone-17-pro-max' },
-  { label: 'iPhone 17 Pro',     slug: 'iphone-17-pro' },
-  { label: 'iPhone 16 Pro Max', slug: 'iphone-16-pro-max' },
-  { label: 'iPhone 16 Pro',     slug: 'iphone-16-pro' },
-  { label: 'iPhone 15 Pro Max', slug: 'iphone-15-pro-max' },
-  { label: 'iPhone 15 Pro',     slug: 'iphone-15-pro' },
-  { label: 'iPhone 15',         slug: 'iphone-15' },
-  { label: 'iPhone 14 Pro Max', slug: 'iphone-14-pro-max' },
-  { label: 'iPhone 13',         slug: 'iphone-13' },
-];
+interface NavProduct {
+  label: string;
+  slug: string;
+}
 
 export function BottomTabBar() {
   const pathname = usePathname();
@@ -57,6 +51,53 @@ export function BottomTabBar() {
   const [dragStartY, setDragStartY] = useState(0);
   const [dragCurrentY, setDragCurrentY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [iphoneMenu, setIphoneMenu] = useState<NavProduct[]>([]);
+
+  // ── Load products dynamically on mount ──────────────────────
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const products = await getAllPublishedProducts();
+        const navProducts = products.map((p) => ({
+          label: p.title,
+          slug: p.slug,
+        }));
+
+        // Sort by model priority (Pro Max > Pro > regular, newer > older)
+        const modelPriority: Record<string, number> = {
+          '17 Pro Max': 10,
+          '17 Pro': 9,
+          '16 Pro Max': 8,
+          '16 Pro': 7,
+          '15 Pro Max': 6,
+          '15 Pro': 5,
+          '15': 4,
+          '14 Pro Max': 3,
+          '14': 2,
+          '13': 1,
+        };
+
+        navProducts.sort((a, b) => {
+          const priorityA = Object.entries(modelPriority).find(([key]) =>
+            a.label.toLowerCase().includes(key.toLowerCase())
+          )?.[1] ?? 0;
+
+          const priorityB = Object.entries(modelPriority).find(([key]) =>
+            b.label.toLowerCase().includes(key.toLowerCase())
+          )?.[1] ?? 0;
+
+          return priorityB - priorityA;
+        });
+
+        setIphoneMenu(navProducts);
+      } catch (error) {
+        console.error('[BottomTabBar] Error loading products:', error);
+        // Keep empty array on error - graceful degradation
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   // Close sheet on route change
   useEffect(() => {
@@ -322,23 +363,29 @@ export function BottomTabBar() {
             </div>
 
             <ul className="divide-y divide-border">
-              {IPHONE_MENU.map((item) => (
-                <li key={item.slug}>
-                  <Link
-                    href={`/iphone/${item.slug}`}
-                    className={clsx(
-                      'flex items-center justify-between py-4 text-[17px]',
-                      'transition-colors duration-100',
-                      pathname === `/iphone/${item.slug}`
-                        ? 'text-accent font-medium'
-                        : 'text-text-primary hover:text-accent'
-                    )}
-                  >
-                    {item.label}
-                    <span className="text-text-tertiary text-[13px]">Ver →</span>
-                  </Link>
+              {iphoneMenu.length > 0 ? (
+                iphoneMenu.map((item) => (
+                  <li key={item.slug}>
+                    <Link
+                      href={`/iphone/${item.slug}`}
+                      className={clsx(
+                        'flex items-center justify-between py-4 text-[17px]',
+                        'transition-colors duration-100',
+                        pathname === `/iphone/${item.slug}`
+                          ? 'text-accent font-medium'
+                          : 'text-text-primary hover:text-accent'
+                      )}
+                    >
+                      {item.label}
+                      <span className="text-text-tertiary text-[13px]">Ver →</span>
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                <li className="py-4 text-[17px] text-text-tertiary">
+                  Cargando modelos...
                 </li>
-              ))}
+              )}
             </ul>
 
             <Link
