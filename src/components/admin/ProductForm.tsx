@@ -329,7 +329,13 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
       if (productId) {
         await updateProduct(productId, data);
       } else {
-        const id = await createProduct({ ...data, status: 'draft', averageRating: 0, reviewCount: 0 });
+        const id = await createProduct({
+          ...data,
+          status: 'draft',
+          averageRating: 0,
+          reviewCount: 0,
+          publishedAt: null,
+        });
         setProductId(id);
       }
       setSaveStatus('saved');
@@ -438,7 +444,7 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
           status,
           averageRating: 0,
           reviewCount: 0,
-          ...(status === 'published' ? { publishedAt: serverTimestamp() } : {}),
+          publishedAt: status === 'published' ? serverTimestamp() : null,
         };
         const id = await createProduct(newProductData);
         setProductId(id);
