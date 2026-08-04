@@ -1,19 +1,63 @@
+'use client';
+
 /**
  * Footer — global footer for the public site.
  * Dark background (#1D1D1F), Apple-style layout.
- * Server Component — no client state needed.
+ * Client Component — loads products dynamically on mount.
  *
  * Products are fetched dynamically from Firestore to avoid dead 404 links.
  */
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getNavigationProducts } from '@/lib/navigation/products';
+import { getAllPublishedProducts } from '@/lib/firebase/products';
 
 const WHATSAPP = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '51944784488';
 
-export async function Footer() {
-  // Fetch published products dynamically to avoid 404 links
-  const featuredModels = await getNavigationProducts();
+interface NavProduct {
+  label: string;
+  slug: string;
+}
+
+export function Footer() {
+  const [featuredModels, setFeaturedModels] = useState<NavProduct[]>([]);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const products = await getAllPublishedProducts();
+        const navProducts = products.map((p) => ({
+          label: p.title,
+          slug: p.slug,
+        }));
+
+        // Sort by model priority
+        const modelPriority: Record<string, number> = {
+          '17 Pro Max': 10, '17 Pro': 9,
+          '16 Pro Max': 8, '16 Pro': 7,
+          '15 Pro Max': 6, '15 Pro': 5,
+          '15': 4, '14 Pro Max': 3,
+          '14': 2, '13': 1,
+        };
+
+        navProducts.sort((a, b) => {
+          const priorityA = Object.entries(modelPriority).find(([key]) =>
+            a.label.toLowerCase().includes(key.toLowerCase())
+          )?.[1] ?? 0;
+          const priorityB = Object.entries(modelPriority).find(([key]) =>
+            b.label.toLowerCase().includes(key.toLowerCase())
+          )?.[1] ?? 0;
+          return priorityB - priorityA;
+        });
+
+        setFeaturedModels(navProducts);
+      } catch (error) {
+        console.error('[Footer] Error loading products:', error);
+      }
+    };
+
+    loadProducts();
+  }, []);
   const year = new Date().getFullYear();
 
   return (
