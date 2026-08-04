@@ -45,11 +45,21 @@ export async function signInWithGoogleAndCreateSession(
   }
   const result = await signInWithPopup(auth, googleProvider);
   const idToken = await result.user.getIdToken();
-  await fetch('/api/session', {
+
+  // Crear la sesión y verificar que se creó correctamente
+  const response = await fetch('/api/session', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idToken }),
+    body: JSON.stringify({ idToken, uid: result.user.uid }),
   });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(`Failed to create session: ${error.error || response.statusText}`);
+  }
+
+  // Esperar un momento para que la cookie se establezca
+  await new Promise(resolve => setTimeout(resolve, 100));
 }
 
 /** Sign out and clear the session cookie */
