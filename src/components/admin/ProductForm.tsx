@@ -432,7 +432,8 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
       if (isEditing && productId) {
         // Al editar, solo actualizar publishedAt si cambiamos de draft a published
         if (initialProduct && initialProduct.status !== 'published' && status === 'published') {
-          await updateProduct(productId, { ...data, publishedAt: serverTimestamp() });
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await updateProduct(productId, { ...data, publishedAt: serverTimestamp() as any });
         } else {
           await updateProduct(productId, { ...data });
         }
@@ -444,7 +445,8 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
           status,
           averageRating: 0,
           reviewCount: 0,
-          publishedAt: status === 'published' ? serverTimestamp() : null,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          publishedAt: status === 'published' ? (serverTimestamp() as any) : null,
         };
         const id = await createProduct(newProductData);
         setProductId(id);
