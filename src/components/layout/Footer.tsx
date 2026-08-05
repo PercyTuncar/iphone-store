@@ -127,6 +127,7 @@ export function Footer() {
                 { label: 'Cómo funciona',        href: '/#como-funciona' },
                 { label: 'Blog',                  href: '/blog' },
                 { label: 'Términos y condiciones',href: '/terminos' },
+                { label: 'Política de devoluciones',href: '/politica-devoluciones' },
                 { label: 'Preguntas frecuentes',  href: '/#faq' },
               ].map((item) => (
                 <li key={item.href}>
