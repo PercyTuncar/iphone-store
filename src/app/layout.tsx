@@ -41,6 +41,9 @@ export const metadata: Metadata = {
   },
   twitter: { card: 'summary_large_image' },
   robots: { index: true, follow: true },
+  verification: {
+    google: 'tj18XBcnnf-NdtcPEzGpQETrjwWq6z8IXqsRQlMFp3g',
+  },
   icons: {
     icon: [
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
