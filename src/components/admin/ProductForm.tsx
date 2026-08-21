@@ -63,6 +63,10 @@ interface FormState {
   category: string;
   googleProductCategoryId: string;
   productGroupId: string;
+  // Section 1 – Sistema de Variantes (Fase 2)
+  batteryHealth: BatteryHealth | null;
+  isVariant: boolean;
+  masterProductId: string;
   // Section 2 – Images (handled separately)
   // Section 3 – Pricing
   priceTotal: number;
@@ -119,6 +123,7 @@ const DEFAULT_STATE: FormState = {
   color: '', condition: 'new', grade: '', stock: 1,
   sku: '', mpn: '', gtin: '', category: 'Celulares y Smartphones > iPhone',
   googleProductCategoryId: '267', productGroupId: '',
+  batteryHealth: null, isVariant: false, masterProductId: '',
   priceTotal: 0, installments: 12, interestRate: 5, downPayment: 0,
   penaltyTier1Days: 5, penaltyTier1Amount: 59,
   penaltyTier2Days: 10, penaltyTier2Amount: 79,
@@ -230,6 +235,10 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
       category:       (initialProduct as any).category || 'Celulares y Smartphones > iPhone',
       googleProductCategoryId: (initialProduct as any).googleProductCategoryId || '267',
       productGroupId: (initialProduct as any).productGroupId || slugify(initialProduct.model),
+      // Campos de sistema de variantes (con fallbacks)
+      batteryHealth:  (initialProduct as any).batteryHealth ?? null,
+      isVariant:      (initialProduct as any).isVariant ?? false,
+      masterProductId: (initialProduct as any).masterProductId ?? '',
       priceTotal:     initialProduct.priceTotal,
       installments:   initialProduct.installments,
       interestRate:   initialProduct.interestRate * 100,
@@ -582,10 +591,10 @@ function buildProductData(
     category:  form.category,
     googleProductCategoryId: form.googleProductCategoryId,
     productGroupId: form.productGroupId,
-    // NUEVO: Campos de sistema de variantes (Fase 1)
-    batteryHealth: (form.condition === 'new' ? null : 90) as BatteryHealth | null, // null para nuevos, 90 para reacondicionados
-    isVariant: false, // Por ahora todos son productos tradicionales (Fase 2 permitirá crear variantes)
-    masterProductId: null, // null = no es variante de nadie
+    // Campos de sistema de variantes (desde el formulario)
+    batteryHealth: form.batteryHealth,
+    isVariant: form.isVariant,
+    masterProductId: form.masterProductId || null,
     images:    imageUrls,
     thumbnailUrl: imageUrls[0] ?? '',
     priceTotal:   form.priceTotal,
@@ -1169,6 +1178,85 @@ function Section1BasicInfo({
           <Label>Stock disponible</Label>
           <input type="number" min="0" className="input mt-1" value={form.stock}
             onChange={e => setField('stock', parseInt(e.target.value) || 0)} />
+        </div>
+
+        {/* NUEVO: Sistema de Variantes */}
+        <div className="sm:col-span-2 border-t border-border pt-4 mt-2">
+          <h3 className="text-[15px] font-semibold mb-3 flex items-center gap-2">
+            <span>🔄</span> Sistema de Variantes
+          </h3>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {/* Salud de Batería */}
+            <div>
+              <Label>Salud de Batería (%)</Label>
+              <select
+                className="input mt-1"
+                value={form.batteryHealth ?? ''}
+                onChange={e => setField('batteryHealth', e.target.value ? parseInt(e.target.value) as BatteryHealth : null)}
+              >
+                <option value="">Sin especificar (para nuevos)</option>
+                <option value="100">100% (Como nuevo)</option>
+                <option value="95">95% (Excelente)</option>
+                <option value="90">90% (Muy bueno)</option>
+                <option value="85">85% (Bueno)</option>
+                <option value="80">80% (Aceptable)</option>
+              </select>
+              <p className="text-caption text-text-secondary mt-1">
+                Para productos nuevos dejar "Sin especificar". Para reacondicionados seleccionar el nivel.
+              </p>
+            </div>
+
+            {/* Es Variante */}
+            <div>
+              <Label>Tipo de Producto</Label>
+              <div className="mt-2 space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="productType"
+                    checked={!form.isVariant}
+                    onChange={() => {
+                      setField('isVariant', false);
+                      setField('masterProductId', '');
+                    }}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-[15px]">Producto Tradicional / Maestro</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="productType"
+                    checked={form.isVariant}
+                    onChange={() => setField('isVariant', true)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-[15px]">Variante de otro producto</span>
+                </label>
+              </div>
+              <p className="text-caption text-text-secondary mt-1">
+                ℹ️ "Maestro" agrupa variantes. "Variante" depende de un maestro.
+              </p>
+            </div>
+
+            {/* Producto Maestro (solo si es variante) */}
+            {form.isVariant && (
+              <div className="sm:col-span-2">
+                <Label>Producto Maestro (ID) *</Label>
+                <input
+                  className="input mt-1 font-mono text-[15px]"
+                  value={form.masterProductId}
+                  onChange={e => setField('masterProductId', e.target.value)}
+                  placeholder="ID del producto maestro (ej: xPAiUCgdNN1gTIcaUYHT)"
+                />
+                <p className="text-caption text-text-secondary mt-1">
+                  Ingresa el ID del producto maestro al que pertenece esta variante.
+                  <br />
+                  💡 Puedes encontrar el ID en la URL al editar el producto maestro.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Campos SEO/Schema (nuevos) */}
