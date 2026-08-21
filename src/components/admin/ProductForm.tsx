@@ -582,6 +582,10 @@ function buildProductData(
     category:  form.category,
     googleProductCategoryId: form.googleProductCategoryId,
     productGroupId: form.productGroupId,
+    // NUEVO: Campos de sistema de variantes (Fase 1)
+    batteryHealth: form.condition === 'new' ? null : 90, // null para nuevos, 90% por defecto para reacondicionados
+    isVariant: false, // Por ahora todos son productos tradicionales (Fase 2 permitirá crear variantes)
+    masterProductId: null, // null = no es variante de nadie
     images:    imageUrls,
     thumbnailUrl: imageUrls[0] ?? '',
     priceTotal:   form.priceTotal,
