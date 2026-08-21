@@ -28,7 +28,7 @@ import { uploadProductImage } from '@/lib/firebase/storage';
 import { IPHONE_MODELS, STORAGE_OPTIONS } from '@/lib/constants/iphone-models';
 import { Button } from '@/components/ui/Button';
 import { toast } from '@/components/ui/Toast';
-import type { Product, ProductCondition, ProductGrade, StorageCapacity } from '@/types/product';
+import type { Product, ProductCondition, ProductGrade, StorageCapacity, BatteryHealth } from '@/types/product';
 
 // ─── Types ──────────────────────────────────────────────────
 type TabId = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8';
@@ -583,7 +583,7 @@ function buildProductData(
     googleProductCategoryId: form.googleProductCategoryId,
     productGroupId: form.productGroupId,
     // NUEVO: Campos de sistema de variantes (Fase 1)
-    batteryHealth: form.condition === 'new' ? null : 90, // null para nuevos, 90% por defecto para reacondicionados
+    batteryHealth: (form.condition === 'new' ? null : 90) as BatteryHealth | null, // null para nuevos, 90 para reacondicionados
     isVariant: false, // Por ahora todos son productos tradicionales (Fase 2 permitirá crear variantes)
     masterProductId: null, // null = no es variante de nadie
     images:    imageUrls,
