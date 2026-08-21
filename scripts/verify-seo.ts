@@ -27,15 +27,19 @@ async function checkUrl(url: string): Promise<string> {
 }
 
 function extractJsonLd(html: string): any[] {
-  const regex = /<script type="application\/ld\+json">(.*?)<\/script>/gs;
-  const matches = [...html.matchAll(regex)];
-  return matches.map(match => {
+  const regex = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/gi;
+  const matches = [];
+  let match;
+
+  while ((match = regex.exec(html)) !== null) {
     try {
-      return JSON.parse(match[1]);
+      matches.push(JSON.parse(match[1]));
     } catch {
-      return null;
+      // Ignore invalid JSON
     }
-  }).filter(Boolean);
+  }
+
+  return matches.filter(Boolean);
 }
 
 async function checkRobotsTxt() {
