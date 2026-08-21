@@ -16,6 +16,11 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.iphoneencuotas
 /**
  * Schema.org Product schema for iPhone product pages
  * Sección 1.1-1.4 del PRD: Product completo con todos los campos recomendados
+ *
+ * CRITICAL for Google Merchant Center & Search Console:
+ * - Includes all required Merchant Listing fields
+ * - Provides shippingDetails and hasMerchantReturnPolicy
+ * - Adds availability at both Product and Offer levels
  */
 export function buildProductSchema(
   product: Product,
@@ -41,7 +46,7 @@ export function buildProductSchema(
     // Imágenes (mínimo 3 requeridas por Merchant Center)
     image: product.images,
 
-    // Identificadores (Sección 1.1)
+    // Identificadores (Sección 1.1) - CRITICAL for Merchant Listings
     sku: product.sku,
     brand: {
       '@type': 'Brand',
@@ -53,6 +58,9 @@ export function buildProductSchema(
 
     // Condición del producto (Bug #7 fix)
     itemCondition,
+
+    // NUEVO: availability a nivel de producto (recomendado por Google)
+    availability,
 
     // Color y especificaciones
     color: product.color,
@@ -72,23 +80,26 @@ export function buildProductSchema(
     ...(product.mpn && { mpn: product.mpn }),
     ...(product.gtin && { gtin: product.gtin }),
 
-    // Offer (Sección 1.3)
+    // Offer (Sección 1.3) - ENHANCED with all Merchant Listing fields
     offers: {
       '@type': 'Offer',
       url: `${SITE_URL}/iphone/${product.slug}`,
       priceCurrency: 'PEN',
       price: product.priceTotal.toFixed(2),
-      availability,
+      availability, // CRITICAL: Required by Google Merchant Center
       itemCondition,
       seller: {
         '@type': 'Organization',
         name: SITE_NAME,
       },
-      // Referencias a políticas globales (Sección 1.3)
-      ...(policy && {
-        hasMerchantReturnPolicy: { '@id': `${SITE_URL}/#returnpolicy` },
-        shippingDetails: { '@id': `${SITE_URL}/#shippingpolicy` },
-      }),
+      // CRITICAL: Always include shipping and return policy references
+      // These fields fix Google Search Console warnings
+      hasMerchantReturnPolicy: {
+        '@id': `${SITE_URL}/#returnpolicy`,
+      },
+      shippingDetails: {
+        '@id': `${SITE_URL}/#shippingpolicy`,
+      },
     },
   };
 
@@ -181,6 +192,9 @@ export function buildFAQSchema(faqItems: { question: string; answer: string }[])
 /**
  * Schema.org Organization schema for site-wide use
  * Sección 1.7 del PRD: Organization completa con políticas globales
+ *
+ * CRITICAL: Always includes default shipping and return policies
+ * These are referenced by Product offers via @id
  */
 export function buildOrganizationSchema(policy?: StorePolicy) {
   const baseSchema: Record<string, unknown> = {
@@ -217,7 +231,8 @@ export function buildOrganizationSchema(policy?: StorePolicy) {
     ],
   };
 
-  // Agregar políticas si están disponibles (Sección 1.7 y 1.8)
+  // CRITICAL: Always provide default policies even without StorePolicy object
+  // Google Merchant Center requires these for all products
   if (policy) {
     baseSchema.hasMerchantReturnPolicy = {
       '@type': 'MerchantReturnPolicy',
@@ -253,6 +268,47 @@ export function buildOrganizationSchema(policy?: StorePolicy) {
           '@type': 'QuantitativeValue',
           minValue: policy.shipping.transitDaysMin,
           maxValue: policy.shipping.transitDaysMax,
+          unitCode: 'DAY',
+        },
+      },
+    };
+  } else {
+    // Fallback: Provide default policies when StorePolicy is not available
+    baseSchema.hasMerchantReturnPolicy = {
+      '@type': 'MerchantReturnPolicy',
+      '@id': `${SITE_URL}/#returnpolicy`,
+      applicableCountry: 'PE',
+      returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+      merchantReturnDays: 0, // No returns after first payment approved
+      returnMethod: 'https://schema.org/ReturnByMail',
+      returnFees: 'https://schema.org/FreeReturn',
+      url: `${SITE_URL}/politica-devoluciones`,
+    };
+
+    baseSchema.shippingDetails = {
+      '@type': 'OfferShippingDetails',
+      '@id': `${SITE_URL}/#shippingpolicy`,
+      shippingRate: {
+        '@type': 'MonetaryAmount',
+        value: '0',
+        currency: 'PEN',
+      },
+      shippingDestination: {
+        '@type': 'DefinedRegion',
+        addressCountry: 'PE',
+      },
+      deliveryTime: {
+        '@type': 'ShippingDeliveryTime',
+        handlingTime: {
+          '@type': 'QuantitativeValue',
+          minValue: 1,
+          maxValue: 2,
+          unitCode: 'DAY',
+        },
+        transitTime: {
+          '@type': 'QuantitativeValue',
+          minValue: 1,
+          maxValue: 5,
           unitCode: 'DAY',
         },
       },

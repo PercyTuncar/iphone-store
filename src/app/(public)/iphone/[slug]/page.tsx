@@ -31,6 +31,24 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
+/* ─── generateStaticParams ────────────────────────────────── */
+/**
+ * Pre-generates all product pages at build time for optimal SEO.
+ * Critical: Without this, Google may not discover dynamic routes.
+ */
+export async function generateStaticParams() {
+  try {
+    const { getAllPublishedProducts } = await import('@/lib/firebase/products');
+    const products = await getAllPublishedProducts();
+    return products.map((product) => ({
+      slug: product.slug,
+    }));
+  } catch (error) {
+    console.error('[generateStaticParams] Failed to load products:', error);
+    return [];
+  }
+}
+
 /* ─── generateMetadata ────────────────────────────────────── */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -76,10 +94,13 @@ export default async function IPhoneProductPage({ params }: Props) {
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.iphoneencuotas.com';
 
+  // Build complete Product schema with policies (always included for Merchant Center)
+  const productSchema = buildProductSchema(product, reviews);
+
   return (
     <>
-      {/* JSON-LD schemas */}
-      <JsonLd data={buildProductSchema(product, reviews)} />
+      {/* JSON-LD schemas - CRITICAL for Google indexing */}
+      <JsonLd data={productSchema} />
       <BreadcrumbSchema
         crumbs={[
           { name: 'Inicio',   url: siteUrl },

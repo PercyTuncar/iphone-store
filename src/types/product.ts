@@ -4,6 +4,7 @@ export type ProductStatus = 'published' | 'draft' | 'archived';
 export type ProductCondition = 'new' | 'refurbished';
 export type ProductGrade = 'A+' | 'A' | 'B';
 export type StorageCapacity = '64GB' | '128GB' | '256GB' | '512GB' | '1TB';
+export type BatteryHealth = 100 | 95 | 90 | 85 | 80;
 
 export interface ProductSpecs {
   display: string;
@@ -61,6 +62,11 @@ export interface Product {
   category: string; // ej. "Celulares y Smartphones > iPhone"
   googleProductCategoryId: string; // ej. "267" (Google Product Taxonomy)
   productGroupId: string; // mismo valor para todas las variantes de color/capacidad
+
+  // NUEVO: Sistema de Variantes
+  batteryHealth: BatteryHealth | null; // null para nuevos, 100-80 para reacondicionados
+  isVariant: boolean; // true si es variante de un maestro, false si es maestro o producto tradicional
+  masterProductId: string | null; // ID del producto maestro (null si no es variante)
 
   // Images
   images: string[];

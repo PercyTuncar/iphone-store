@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Select-Object FullName)",
+      "WebFetch(domain:developers.google.com)",
+      "Bash(curl -s \"https://www.iphoneencuotas.com/robots.txt\")",
+      "Bash(curl -s \"https://www.iphoneencuotas.com/iphone/iphone-15-pro\")",
+      "Bash(xargs grep -l \"productGroupId\\\\|variant\\\\|ProductGroup\")",
+      "Bash(xargs grep -l \"producto\\\\|Product\")",
+      "Bash(curl -s \"https://www.iphoneencuotas.com/sitemap.xml\")",
+      "Bash(curl -s \"https://schema.org/Offer\")"
+    ]
+  }
+}

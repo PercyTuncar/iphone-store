@@ -82,7 +82,7 @@ export default async function IPhoneEnCuotasPage() {
 
   return (
     <>
-      {/* Structured data */}
+      {/* Structured data - CRITICAL: Organization with policies must come first */}
       <JsonLd data={buildOrganizationSchema()} />
       <JsonLd
         data={buildCollectionPageSchema(

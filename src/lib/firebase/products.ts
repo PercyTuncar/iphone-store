@@ -133,6 +133,61 @@ export async function deleteProduct(id: string): Promise<void> {
   await deleteDoc(ref);
 }
 
+/** Get all variants of a master product by master product ID */
+export async function getVariantsByMasterId(masterProductId: string): Promise<Product[]> {
+  const q = query(
+    collection(db, COLLECTION),
+    where('isVariant', '==', true),
+    where('masterProductId', '==', masterProductId),
+    where('status', '==', 'published'),
+    orderBy('priceTotal', 'asc')
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => toProduct(d.id, d.data()));
+}
+
+/** Check if a product has variants (is a master product with active variants) */
+export async function hasVariants(productId: string): Promise<boolean> {
+  const q = query(
+    collection(db, COLLECTION),
+    where('masterProductId', '==', productId),
+    where('status', '==', 'published')
+  );
+  const snap = await getDocs(q);
+  return !snap.empty;
+}
+
+/** Get all master products (products that are not variants) */
+export async function getAllMasterProducts(): Promise<ProductCard[]> {
+  const q = query(
+    collection(db, COLLECTION),
+    where('status', '==', 'published'),
+    where('isVariant', '==', false),
+    orderBy('publishedAt', 'desc')
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      slug: data.slug,
+      title: data.title,
+      model: data.model,
+      storage: data.storage,
+      condition: data.condition,
+      grade: data.grade,
+      thumbnailUrl: data.thumbnailUrl,
+      priceTotal: data.priceTotal,
+      installments: data.installments,
+      installmentAmount: data.installmentAmount,
+      stock: data.stock,
+      averageRating: data.averageRating,
+      reviewCount: data.reviewCount,
+      status: data.status,
+    } as ProductCard;
+  });
+}
+
 /** Decrement stock by 1 when a reservation is created */
 export async function decrementStock(id: string): Promise<void> {
   const product = await getProductById(id);

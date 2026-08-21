@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "migrate:products": "tsx scripts/migrate-products.ts",
-    "migrate:images": "tsx scripts/migrate-images.ts"
+    "migrate:images": "tsx scripts/migrate-images.ts",
+    "migrate:variant-fields": "tsx scripts/migrate-add-variant-fields.ts",
+    "verify:seo": "tsx scripts/verify-seo.ts"
   },
   "dependencies": {
     "@tiptap/extension-character-count": "^2.27.2",
