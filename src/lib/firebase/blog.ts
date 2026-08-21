@@ -41,24 +41,29 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
 export async function getAllPublishedPosts(): Promise<BlogPostCard[]> {
   const q = query(
     collection(db, COLLECTION),
-    where('status', '==', 'published'),
-    orderBy('publishedAt', 'desc')
+    where('status', '==', 'published')
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => {
-    const data = d.data();
-    return {
-      id: d.id,
-      slug: data.slug,
-      title: data.title,
-      excerpt: data.excerpt,
-      featuredImage: data.featuredImage,
-      category: data.category,
-      author: data.author,
-      publishedAt: data.publishedAt,
-      status: data.status,
-    } as BlogPostCard;
-  });
+  return snap.docs
+    .map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        slug: data.slug,
+        title: data.title,
+        excerpt: data.excerpt,
+        featuredImage: data.featuredImage,
+        category: data.category,
+        author: data.author,
+        publishedAt: data.publishedAt,
+        status: data.status,
+      } as BlogPostCard;
+    })
+    .sort((a, b) => {
+      const aTime = typeof a.publishedAt?.toDate === 'function' ? a.publishedAt.toDate().getTime() : 0;
+      const bTime = typeof b.publishedAt?.toDate === 'function' ? b.publishedAt.toDate().getTime() : 0;
+      return bTime - aTime;
+    });
 }
 
 /** Get all posts (all statuses) — for admin */

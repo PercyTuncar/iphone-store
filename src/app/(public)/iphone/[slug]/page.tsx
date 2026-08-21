@@ -16,14 +16,14 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Smartphone, Receipt, Package } from 'lucide-react';
-import { getProductBySlug } from '@/lib/firebase/products';
+import { getProductBySlug, getAllVariantsByMasterId } from '@/lib/firebase/products';
 import { getApprovedReviews } from '@/lib/firebase/reviews';
 import { ProductPageClient } from '@/components/product/ProductPageClient';
 import { ProductSpecs } from '@/components/product/ProductSpecs';
 import { ReviewSection } from '@/components/product/ReviewSection';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
-import { buildProductSchema } from '@/lib/utils/schema';
+import { buildProductSchema, buildProductGroupSchema } from '@/lib/utils/schema';
 import type { Review } from '@/types/review';
 import type { FaqItem, Product } from '@/types/product';
 
@@ -93,9 +93,27 @@ export default async function IPhoneProductPage({ params }: Props) {
   })();
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.iphoneencuotas.com';
+  const hasVariantChildren = product.isVariant === false
+    ? await getAllVariantsByMasterId(product.id).catch(() => [])
+    : [];
 
-  // Build complete Product schema with policies (always included for Merchant Center)
-  const productSchema = buildProductSchema(product, reviews);
+  const variantClientProducts = hasVariantChildren.map((variant) => {
+    const { createdAt, updatedAt, publishedAt, ...rest } = variant;
+    return rest;
+  });
+
+  const productSchema = hasVariantChildren.length > 0
+    ? buildProductGroupSchema(product, hasVariantChildren.map((variant) => ({
+        slug: variant.slug,
+        color: variant.color,
+        storage: variant.storage,
+        priceTotal: variant.priceTotal,
+        sku: variant.sku,
+        stock: variant.stock,
+        condition: variant.condition,
+        batteryHealth: variant.batteryHealth,
+      })))
+    : buildProductSchema(product, reviews);
 
   return (
     <>
@@ -111,7 +129,7 @@ export default async function IPhoneProductPage({ params }: Props) {
       />
 
       {/* Interactive hero + sticky bar + payment modal */}
-      <ProductPageClient product={clientProduct} />
+      <ProductPageClient product={clientProduct} variants={variantClientProducts} />
 
       {/* ── How payment works ── */}
       <section

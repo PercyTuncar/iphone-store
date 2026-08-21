@@ -29,126 +29,114 @@ export function ProductHero({
   onReserve,
   selectedInstallments,
   onInstallmentSelect,
-  installmentCalculation
+  installmentCalculation,
 }: ProductHeroProps) {
-  const images = product.images.length > 0 ? product.images : [product.thumbnailUrl];
   const [activeIdx, setActiveIdx] = useState(0);
+  const images = product.images?.length ? product.images : [product.thumbnailUrl || '/og-default.jpg'];
+  const hasBattery = product.batteryHealth !== null && product.batteryHealth !== undefined;
 
   return (
-    <section
-      className="pt-6 pb-16 bg-bg-primary"
-      aria-label={`Detalles de ${product.title}`}
-    >
-      <div className="container-main">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
-
-          {/* ── Gallery ── */}
-          <div className="flex flex-col gap-4">
-            {/* Main image — LCP, priority={true} */}
-            <div className="relative bg-bg-secondary rounded-[18px] overflow-hidden aspect-square flex items-center justify-center p-10">
-              <AppImage
-                src={images[activeIdx] ?? '/og-default.jpg'}
-                alt={`${product.title}${product.color ? ` color ${product.color}` : ''}, vista ${activeIdx + 1}`}
-                width={480}
-                height={480}
-                priority               // LCP optimization
-                preset="none"
-                className="object-contain w-full h-full"
-              />
-            </div>
-
-            {/* Thumbnails */}
-            {images.length > 1 && (
-              <div className="flex gap-3 overflow-x-auto pb-1" role="tablist" aria-label="Galería de imágenes">
-                {images.map((src, i) => (
-                  <button
-                    key={i}
-                    role="tab"
-                    aria-selected={activeIdx === i}
-                    aria-label={`Imagen ${i + 1}`}
-                    onClick={() => setActiveIdx(i)}
-                    className={clsx(
-                      'flex-shrink-0 w-16 h-16 rounded-[10px] overflow-hidden border-2 transition-colors',
-                      activeIdx === i ? 'border-accent' : 'border-border hover:border-accent/50'
-                    )}
-                  >
-                    <AppImage
-                      src={src}
-                      alt={`Miniatura ${i + 1}`}
-                      width={64}
-                      height={64}
-                      className="object-cover w-full h-full"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
+    <section className="section-gradient">
+      <div className="container-main grid lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] gap-8 items-start">
+        {/* ── Gallery ── */}
+        <div className="space-y-4">
+          <div className="card overflow-hidden">
+            <AppImage
+              src={images[activeIdx]}
+              alt={product.title}
+              width={1200}
+              height={1200}
+              priority
+              className="w-full h-auto object-contain bg-bg-primary"
+            />
           </div>
 
-          {/* ── Product info ── */}
-          <div className="flex flex-col gap-5 md:sticky md:top-20">
-            {/* Condition badges */}
-            <div className="flex flex-wrap gap-2">
-              <Badge variant={product.condition === 'new' ? 'accent' : 'neutral'}>
-                {product.condition === 'new' ? 'Nuevo' : 'Reacondicionado'}
-              </Badge>
-              {product.grade && (
-                <Badge variant="info">Grado {product.grade}</Badge>
+          {images.length > 1 && (
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {images.map((src, i) => (
+                <button
+                  key={src + i}
+                  type="button"
+                  onClick={() => setActiveIdx(i)}
+                  className={clsx(
+                    'flex-shrink-0 w-16 h-16 rounded-[10px] overflow-hidden border-2 transition-colors',
+                    activeIdx === i ? 'border-accent' : 'border-border hover:border-accent/50'
+                  )}
+                >
+                  <AppImage
+                    src={src}
+                    alt={`Miniatura ${i + 1}`}
+                    width={64}
+                    height={64}
+                    className="object-cover w-full h-full"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Product info ── */}
+        <div className="flex flex-col gap-5 md:sticky md:top-20">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant={product.condition === 'new' ? 'accent' : 'neutral'}>
+              {product.condition === 'new' ? 'Nuevo' : 'Reacondicionado'}
+            </Badge>
+            {product.grade && <Badge variant="info">Grado {product.grade}</Badge>}
+            {product.storage && <Badge variant="neutral">{product.storage}</Badge>}
+            {product.color && <Badge variant="neutral">{product.color}</Badge>}
+            {hasBattery && <Badge variant="neutral">Batería {product.batteryHealth}%</Badge>}
+          </div>
+
+          <h1 className="text-[clamp(26px,4vw,40px)] font-bold leading-tight tracking-tight">
+            {product.seo.h1 || product.title}
+          </h1>
+
+          {product.reviewCount > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-[#FF9F0A]" aria-hidden="true">
+                {'★'.repeat(Math.round(product.averageRating))}
+              </span>
+              <span className="text-label text-text-secondary">
+                {product.averageRating.toFixed(1)} ({product.reviewCount} reseñas)
+              </span>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <p className="text-label text-text-secondary">Precio total</p>
+            <div className="flex items-end gap-2 flex-wrap">
+              <span className="text-[clamp(36px,5vw,56px)] font-bold tracking-tight text-accent leading-none">
+                S/ {product.priceTotal.toFixed(2)}
+              </span>
+              {product.stock > 0 && product.stock <= 5 && (
+                <span className="text-label text-warning font-medium">Solo quedan {product.stock} unidades</span>
               )}
-              {product.storage && (
-                <Badge variant="neutral">{product.storage}</Badge>
-              )}
-              {product.color && (
-                <Badge variant="neutral">{product.color}</Badge>
+              {product.stock === 0 && (
+                <span className="text-label text-danger font-medium">Sin stock</span>
               )}
             </div>
+          </div>
 
-            {/* H1 — exactly one per page, SEO-optimized */}
-            <h1 className="text-[clamp(26px,4vw,40px)] font-bold leading-tight tracking-tight">
-              {product.seo.h1 || product.title}
-            </h1>
+          <InstallmentSelector
+            product={product}
+            selectedInstallments={selectedInstallments}
+            onSelect={onInstallmentSelect}
+          />
 
-            {/* Reviews summary */}
-            {product.reviewCount > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-[#FF9F0A]" aria-hidden="true">
-                  {'★'.repeat(Math.round(product.averageRating))}
-                </span>
-                <span className="text-label text-text-secondary">
-                  {product.averageRating.toFixed(1)} ({product.reviewCount} reseñas)
-                </span>
-              </div>
-            )}
-
-            {/* Installment Selector */}
-            <InstallmentSelector
-              product={product}
-              selectedInstallments={selectedInstallments}
-              onSelect={onInstallmentSelect}
-            />
-
-            {/* CTA */}
+          <div className="flex flex-col gap-3 pt-2">
             <button
+              className="btn btn-primary w-full text-[17px] py-4"
               onClick={onReserve}
               disabled={product.stock === 0}
-              className={clsx(
-                'btn btn-primary w-full text-[17px] py-4 font-semibold',
-                product.stock === 0 && 'opacity-40 cursor-not-allowed'
-              )}
             >
-              {product.stock === 0 ? 'Sin stock' : (() => {
-                if (selectedInstallments === 1) {
-                  // Pago al contado
-                  return `Comprar por S/ ${product.priceTotal.toFixed(2)}`;
-                }
-
-                // Pago en cuotas
-                const firstPayment = product.downPayment > 0
-                  ? product.downPayment
-                  : (installmentCalculation?.installmentAmount ?? product.installmentAmount);
-
-                return `Reservar con S/ ${firstPayment.toFixed(2)}`;
-              })()}
+              {selectedInstallments === 1
+                ? `Comprar por S/ ${product.priceTotal.toFixed(2)}`
+                : `Reservar con S/ ${(
+                    product.downPayment > 0
+                      ? product.downPayment
+                      : (installmentCalculation?.installmentAmount ?? product.installmentAmount)
+                  ).toFixed(2)}`}
             </button>
 
             {product.stock > 0 && product.stock <= 5 && (

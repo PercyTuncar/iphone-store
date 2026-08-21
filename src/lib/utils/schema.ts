@@ -144,7 +144,7 @@ export function buildProductSchema(
  */
 export function buildProductGroupSchema(
   variant: Product,
-  siblings: Pick<Product, 'slug' | 'color' | 'storage' | 'priceTotal' | 'sku'>[]
+  siblings: Pick<Product, 'slug' | 'color' | 'storage' | 'priceTotal' | 'sku' | 'stock' | 'condition' | 'batteryHealth'>[]
 ) {
   return {
     '@context': 'https://schema.org',
@@ -153,7 +153,7 @@ export function buildProductGroupSchema(
     productGroupID: variant.productGroupId,
     name: variant.model,
     url: `${SITE_URL}/iphone/${variant.slug}`,
-    variesBy: ['https://schema.org/color', 'https://schema.org/size'],
+    variesBy: ['https://schema.org/color', 'https://schema.org/size', 'https://schema.org/Color', 'https://schema.org/condition'],
     hasVariant: siblings.map((s) => ({
       '@type': 'Product',
       name: `${variant.model} ${s.color} ${s.storage}`,
@@ -161,10 +161,29 @@ export function buildProductGroupSchema(
       sku: s.sku,
       color: s.color,
       size: s.storage,
+      additionalProperty: [
+        ...(s.batteryHealth
+          ? [{
+              '@type': 'PropertyValue',
+              name: 'batteryHealth',
+              value: `${s.batteryHealth}%`,
+            }]
+          : []),
+        {
+          '@type': 'PropertyValue',
+          name: 'condition',
+          value: s.condition === 'new' ? 'new' : 'refurbished',
+        },
+      ],
       offers: {
         '@type': 'Offer',
+        url: `${SITE_URL}/iphone/${s.slug}`,
         price: s.priceTotal.toFixed(2),
         priceCurrency: 'PEN',
+        availability: s.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+        itemCondition: s.condition === 'new'
+          ? 'https://schema.org/NewCondition'
+          : 'https://schema.org/RefurbishedCondition',
       },
     })),
   };

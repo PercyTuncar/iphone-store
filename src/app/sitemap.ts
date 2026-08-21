@@ -55,13 +55,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const posts = await getAllPublishedPosts();
     blogUrls = posts
-      .filter((p) => p.publishedAt)
-      .map((p) => ({
-        url: `${siteUrl}/blog/${p.slug}`,
-        lastModified: (p.publishedAt as { toDate(): Date }).toDate(),
-        changeFrequency: 'monthly' as const,
-        priority: 0.7,
-      }));
+      .map((p) => {
+        const publishedAt = p.publishedAt && typeof p.publishedAt === 'object' && 'toDate' in p.publishedAt
+          ? (p.publishedAt as { toDate(): Date }).toDate()
+          : new Date();
+        return {
+          url: `${siteUrl}/blog/${p.slug}`,
+          lastModified: publishedAt,
+          changeFrequency: 'monthly' as const,
+          priority: 0.7,
+        };
+      });
   } catch {
     console.warn('[sitemap] Could not load blog posts');
   }

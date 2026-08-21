@@ -13,7 +13,7 @@
  * 8. SEO y Visibilidad
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Info, Image as ImageIcon, DollarSign, ShieldAlert, CreditCard,
@@ -26,6 +26,7 @@ import { serverTimestamp } from 'firebase/firestore';
 import { createProduct, updateProduct } from '@/lib/firebase/products';
 import { uploadProductImage } from '@/lib/firebase/storage';
 import { IPHONE_MODELS, STORAGE_OPTIONS } from '@/lib/constants/iphone-models';
+import { AdminVariantManager } from '@/components/admin/AdminVariantManager';
 import { Button } from '@/components/ui/Button';
 import { toast } from '@/components/ui/Toast';
 import type { Product, ProductCondition, ProductGrade, StorageCapacity, BatteryHealth } from '@/types/product';
@@ -526,7 +527,7 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
       {/* Tab panels */}
       <div className="card p-6">
         {activeTab === '1' && (
-          <Section1BasicInfo form={form} setField={setField} />
+          <Section1BasicInfo form={form} setField={setField} initialProduct={initialProduct ?? null} />
         )}
         {activeTab === '2' && (
           <Section2Images images={images} setImages={setImages} productId={productId} />
@@ -1099,8 +1100,8 @@ function Section5Payments({
 // SECTION 1 — Información Básica
 // ═══════════════════════════════════════════════════════════
 function Section1BasicInfo({
-  form, setField,
-}: { form: FormState; setField: <K extends keyof FormState>(k: K, v: FormState[K]) => void }) {
+  form, setField, initialProduct,
+}: { form: FormState; setField: <K extends keyof FormState>(k: K, v: FormState[K]) => void; initialProduct: Product | null }) {
   return (
     <div className="space-y-5">
       <SectionHeader title="Información Básica" icon={Info} />
@@ -1309,6 +1310,11 @@ function Section1BasicInfo({
                 ⚠️ NO inventes valores - deja vacío si no tienes el código real
               </p>
             </div>
+            {initialProduct && !initialProduct.isVariant && (
+              <div className="sm:col-span-2 pt-2">
+                <AdminVariantManager masterProduct={initialProduct} />
+              </div>
+            )}
           </div>
         </div>
       </div>

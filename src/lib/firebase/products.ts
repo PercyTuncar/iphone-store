@@ -133,20 +133,23 @@ export async function deleteProduct(id: string): Promise<void> {
   await deleteDoc(ref);
 }
 
-/** Get all variants of a master product by master product ID */
-export async function getVariantsByMasterId(masterProductId: string): Promise<Product[]> {
+/** Get all variants of a master product by master product ID, including drafts */
+export async function getAllVariantsByMasterId(masterProductId: string): Promise<Product[]> {
   const q = query(
     collection(db, COLLECTION),
     where('isVariant', '==', true),
     where('masterProductId', '==', masterProductId),
-    where('status', '==', 'published'),
     orderBy('priceTotal', 'asc')
   );
   const snap = await getDocs(q);
   return snap.docs.map((d) => toProduct(d.id, d.data()));
 }
 
-/** Check if a product has variants (is a master product with active variants) */
+/** Delete a product variant by document ID */
+export async function deleteVariant(id: string): Promise<void> {
+  await deleteProduct(id);
+}
+
 export async function hasVariants(productId: string): Promise<boolean> {
   const q = query(
     collection(db, COLLECTION),

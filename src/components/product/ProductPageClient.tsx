@@ -2,48 +2,87 @@
 
 /**
  * ProductPageClient — interactive wrapper for the product page.
- * Connects ProductHero + StickyBuyBar + real PaymentModal (Phase 6).
+ * Keeps the active product variant, installment selection, sticky CTA and payment modal in sync.
  */
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ProductHero } from '@/components/product/ProductHero';
+import { ProductVariantSelector } from '@/components/product/ProductVariantSelector';
 import { StickyBuyBar } from '@/components/layout/StickyBuyBar';
 import { PaymentModal } from '@/components/product/PaymentModal';
 import { calculateInstallmentPlan } from '@/lib/utils/installments';
 import type { Product } from '@/types/product';
 import type { InstallmentCalculation } from '@/lib/utils/installments';
 
-type ProductClient = Omit<Product, 'createdAt' | 'updatedAt' | 'publishedAt'>;
+export type ProductClient = Omit<Product, 'createdAt' | 'updatedAt' | 'publishedAt'>;
 
 interface ProductPageClientProps {
   product: ProductClient;
+  variants?: ProductClient[];
 }
 
-export function ProductPageClient({ product }: ProductPageClientProps) {
+export function ProductPageClient({ product, variants = [] }: ProductPageClientProps) {
+  const variantList = variants.length > 0 ? variants : [];
+  const initialVariant = useMemo(
+    () => variantList.find((variant) => variant.stock > 0) ?? variantList[0] ?? product,
+    [variantList, product]
+  );
+
+  const [selectedVariantId, setSelectedVariantId] = useState(initialVariant.id);
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedInstallments, setSelectedInstallments] = useState(product.installments);
+  const [selectedInstallments, setSelectedInstallments] = useState(initialVariant.installments);
   const [installmentCalculation, setInstallmentCalculation] = useState<InstallmentCalculation | null>(null);
 
-  // Calcular la cuota inicial al montar
+  const currentProduct = useMemo(
+    () => variantList.find((variant) => variant.id === selectedVariantId) ?? product,
+    [variantList, selectedVariantId, product]
+  );
+
+  useEffect(() => {
+    setSelectedVariantId(initialVariant.id);
+  }, [initialVariant.id]);
+
   useEffect(() => {
     const calculation = calculateInstallmentPlan(
-      product.priceTotal,
-      product.interestRate * 100,
-      product.installments,
-      product.downPayment
+      currentProduct.priceTotal,
+      currentProduct.interestRate * 100,
+      currentProduct.installments,
+      currentProduct.downPayment
     );
     setInstallmentCalculation(calculation);
-  }, [product.priceTotal, product.interestRate, product.installments, product.downPayment]);
+    setSelectedInstallments(currentProduct.installments);
+  }, [
+    currentProduct.id,
+    currentProduct.priceTotal,
+    currentProduct.interestRate,
+    currentProduct.installments,
+    currentProduct.downPayment,
+  ]);
 
   const handleInstallmentSelect = (installments: number, calculation: InstallmentCalculation) => {
     setSelectedInstallments(installments);
     setInstallmentCalculation(calculation);
   };
 
+  const firstPaymentAmount = selectedInstallments === 1
+    ? currentProduct.priceTotal
+    : (currentProduct.downPayment > 0
+        ? currentProduct.downPayment
+        : (installmentCalculation?.installmentAmount ?? currentProduct.installmentAmount));
+
   return (
     <>
+      {variantList.length > 0 && (
+        <ProductVariantSelector
+          productTitle={product.model}
+          variants={variantList}
+          defaultVariantId={selectedVariantId}
+          onVariantChange={setSelectedVariantId}
+        />
+      )}
+
       <ProductHero
-        product={product}
+        product={currentProduct}
         onReserve={() => setModalOpen(true)}
         selectedInstallments={selectedInstallments}
         onInstallmentSelect={handleInstallmentSelect}
@@ -51,24 +90,18 @@ export function ProductPageClient({ product }: ProductPageClientProps) {
       />
 
       <StickyBuyBar
-        productName={product.title}
-        firstPaymentAmount={
-          selectedInstallments === 1
-            ? product.priceTotal
-            : (product.downPayment > 0
-                ? product.downPayment
-                : (installmentCalculation?.installmentAmount ?? product.installmentAmount))
-        }
+        productName={currentProduct.title}
+        firstPaymentAmount={firstPaymentAmount}
         installments={selectedInstallments}
-        downPayment={product.downPayment}
+        downPayment={currentProduct.downPayment}
         onReserve={() => setModalOpen(true)}
-        disabled={product.stock === 0}
+        disabled={currentProduct.stock === 0}
       />
 
       <PaymentModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        product={product}
+        product={currentProduct}
         selectedInstallments={selectedInstallments}
         installmentCalculation={installmentCalculation}
       />
