@@ -79,7 +79,7 @@ function generateProductItem(product: any, policy: any): string {
       <g:id>${escapeXml(sku)}</g:id>
       <g:title>${escapeXml(feedTitle)}</g:title>
       <g:description>${escapeXml(feedDescription)}</g:description>
-      <g:link>${SITE_URL}/iphone/${product.slug}</g:link>
+      <g:link>${SITE_URL}/${product.slug}</g:link>
       <g:image_link>${escapeXml(mainImage)}</g:image_link>
 ${additionalImages.map((img: string) => `      <g:additional_image_link>${escapeXml(img)}</g:additional_image_link>`).join('\n')}
       <g:availability>${availability}</g:availability>

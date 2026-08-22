@@ -63,7 +63,7 @@ export async function actionSendAbandonmentReminders(
             html: `
               <p>${personalizedMessage.replace(/\n/g, '<br>')}</p>
               <p style="margin-top:24px;">
-                <a href="${siteUrl}/iphone/${recipient.productSlug}"
+                <a href="${siteUrl}/${recipient.productSlug}"
                    style="background:#0071E3;color:#fff;padding:12px 24px;border-radius:980px;text-decoration:none;font-weight:600;">
                   Ver mi iPhone
                 </a>

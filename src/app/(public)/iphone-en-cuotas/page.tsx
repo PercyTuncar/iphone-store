@@ -209,7 +209,7 @@ export default async function IPhoneEnCuotasPage() {
 function ProductCard({ product }: { product: ProductCard }) {
   return (
     <Link
-      href={`/iphone/${product.slug}`}
+      href={`/${product.slug}`}
       className="card p-0 flex flex-col group no-underline hover:shadow-elevated transition-shadow"
       aria-label={`Ver detalles de ${product.title}`}
     >

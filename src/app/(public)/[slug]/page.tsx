@@ -1,5 +1,5 @@
 /**
- * Product page — /iphone/[slug]
+ * Product page — /[slug]
  *
  * Server Component with:
  * - generateMetadata() for dynamic meta tags + Open Graph
@@ -30,6 +30,20 @@ import type { FaqItem, Product } from '@/types/product';
 interface Props {
   params: Promise<{ slug: string }>;
 }
+
+// Static routes that should NOT be treated as product slugs
+const RESERVED_ROUTES = [
+  'blog',
+  'iphone-en-cuotas',
+  'terminos',
+  'politica-devoluciones',
+  'dashboard',
+  'admin',
+  'auth',
+  'login',
+  'api',
+  'pago-exitoso',
+];
 
 /* ─── generateStaticParams ────────────────────────────────── */
 /**
@@ -80,6 +94,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function IPhoneProductPage({ params }: Props) {
   const { slug } = await params;
 
+  // Prevent collision with static routes
+  if (RESERVED_ROUTES.includes(slug)) {
+    notFound();
+  }
+
   const [product, reviews] = await Promise.all([
     getProductBySlug(slug),
     getApprovedReviews(slug).catch(() => [] as Review[]),
@@ -123,7 +142,7 @@ export default async function IPhoneProductPage({ params }: Props) {
         crumbs={[
           { name: 'Inicio',   url: siteUrl },
           { name: 'iPhone en Cuotas',  url: `${siteUrl}/iphone-en-cuotas` },
-          { name: product.model, url: `${siteUrl}/iphone/${slug}` },
+          { name: product.model, url: `${siteUrl}/${slug}` },
         ]}
         className="container-main"
       />

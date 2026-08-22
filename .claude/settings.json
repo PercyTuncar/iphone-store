@@ -8,7 +8,12 @@
       "Bash(xargs grep -l \"productGroupId\\\\|variant\\\\|ProductGroup\")",
       "Bash(xargs grep -l \"producto\\\\|Product\")",
       "Bash(curl -s \"https://www.iphoneencuotas.com/sitemap.xml\")",
-      "Bash(curl -s \"https://schema.org/Offer\")"
+      "Bash(curl -s \"https://schema.org/Offer\")",
+      "Bash(git commit -m 'fix: replace regex flag '\\\\''s'\\\\'' with compatible alternative in verify-seo script *)",
+      "Bash(git commit -m 'fix: add missing variant fields to buildProductData function *)",
+      "Bash(git commit -m 'fix: correct BatteryHealth type casting in buildProductData *)",
+      "Bash(git commit -m 'feat: add variant system UI to product form \\(Phase 2\\) *)",
+      "Bash(git commit *)"
     ]
   }
 }

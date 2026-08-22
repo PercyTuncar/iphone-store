@@ -6,7 +6,7 @@
  *   <BreadcrumbSchema
  *     crumbs={[
  *       { name: 'Inicio', url: '/' },
- *       { name: 'iPhone 15 Pro Max', url: '/iphone/iphone-15-pro-max' },
+ *       { name: 'iPhone 15 Pro Max', url: '/iphone-15-pro-max' },
  *     ]}
  *   />
  */

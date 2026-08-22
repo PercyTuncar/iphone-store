@@ -197,7 +197,7 @@ export default async function BlogPostPage({ params }: Props) {
                   </p>
                 </div>
                 <Link
-                  href={`/iphone/${relatedProduct.slug}`}
+                  href={`/${relatedProduct.slug}`}
                   className="btn btn-primary text-[15px] px-6 py-3 whitespace-nowrap flex-shrink-0"
                 >
                   Reservar en Cuotas →

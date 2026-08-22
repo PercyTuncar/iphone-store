@@ -251,7 +251,7 @@ export default async function HomePage() {
 function ProductCard({ product }: { product: ProductCard }) {
   return (
     <Link
-      href={`/iphone/${product.slug}`}
+      href={`/${product.slug}`}
       className="card p-0 flex flex-col group no-underline"
       aria-label={`Ver ${product.title}`}
     >

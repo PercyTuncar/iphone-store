@@ -40,7 +40,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const products = await getAllPublishedProducts();
     productUrls = products.map((p) => ({
-      url: `${siteUrl}/iphone/${p.slug}`,
+      url: `${siteUrl}/${p.slug}`,
       lastModified: new Date(), // TODO: usar p.updatedAt cuando esté disponible en ProductCard
       changeFrequency: 'weekly' as const,
       priority: 0.9,

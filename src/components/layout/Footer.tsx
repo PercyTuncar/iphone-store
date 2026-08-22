@@ -102,7 +102,7 @@ export function Footer() {
                 featuredModels.map((m) => (
                   <li key={m.slug}>
                     <Link
-                      href={`/iphone/${m.slug}`}
+                      href={`/${m.slug}`}
                       className="text-[14px] text-[#A1A1A6] hover:text-white transition-colors"
                     >
                       {m.label}

@@ -203,12 +203,12 @@ export function Navbar() {
                     iphoneMenu.map((item) => (
                       <Link
                         key={item.slug}
-                        href={`/iphone/${item.slug}`}
+                        href={`/${item.slug}`}
                         role="menuitem"
                         className={clsx(
                           'flex items-center gap-2.5 px-4 py-2.5 text-[15px]',
                           'transition-colors duration-100',
-                          pathname === `/iphone/${item.slug}`
+                          pathname === `/${item.slug}`
                             ? 'text-accent font-semibold bg-accent/8'
                             : 'text-text-primary hover:bg-[#F2F2F7]'
                         )}

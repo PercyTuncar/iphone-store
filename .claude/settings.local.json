@@ -5,7 +5,13 @@
       "Bash(npx tsc *)",
       "Bash(npm run *)",
       "Bash(node -e ' *)",
-      "Bash(mkdir -p \"c:/Users/tunca/OneDrive/Desktop/Github/iphone-store/public\")"
+      "Bash(mkdir -p \"c:/Users/tunca/OneDrive/Desktop/Github/iphone-store/public\")",
+      "Bash(mkdir -p \"src/app/\\(public\\)/[slug]\")",
+      "Bash(cp \"src/app/\\(public\\)/iphone/[slug]/page.tsx\" \"src/app/\\(public\\)/[slug]/page.tsx\")",
+      "Bash(grep -rn \"/iphone/\\\\${\" src/components src/app --include=\"*.tsx\" --include=\"*.ts\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git rm *)"
     ]
   }
 }

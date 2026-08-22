@@ -83,7 +83,7 @@ export function buildProductSchema(
     // Offer (Sección 1.3) - ENHANCED with all Merchant Listing fields
     offers: {
       '@type': 'Offer',
-      url: `${SITE_URL}/iphone/${product.slug}`,
+      url: `${SITE_URL}/${product.slug}`,
       priceCurrency: 'PEN',
       price: product.priceTotal.toFixed(2),
       availability, // CRITICAL: Required by Google Merchant Center
@@ -152,12 +152,12 @@ export function buildProductGroupSchema(
     '@id': `${SITE_URL}/#productgroup-${variant.productGroupId}`,
     productGroupID: variant.productGroupId,
     name: variant.model,
-    url: `${SITE_URL}/iphone/${variant.slug}`,
+    url: `${SITE_URL}/${variant.slug}`,
     variesBy: ['https://schema.org/color', 'https://schema.org/size', 'https://schema.org/Color', 'https://schema.org/condition'],
     hasVariant: siblings.map((s) => ({
       '@type': 'Product',
       name: `${variant.model} ${s.color} ${s.storage}`,
-      url: `${SITE_URL}/iphone/${s.slug}`,
+      url: `${SITE_URL}/${s.slug}`,
       sku: s.sku,
       color: s.color,
       size: s.storage,
@@ -177,7 +177,7 @@ export function buildProductGroupSchema(
       ],
       offers: {
         '@type': 'Offer',
-        url: `${SITE_URL}/iphone/${s.slug}`,
+        url: `${SITE_URL}/${s.slug}`,
         price: s.priceTotal.toFixed(2),
         priceCurrency: 'PEN',
         availability: s.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
@@ -367,12 +367,12 @@ export function buildItemListSchema(products: ProductCard[]) {
     itemListElement: products.map((p, i) => ({
       '@type': 'ListItem',
       position: i + 1,
-      url: `${SITE_URL}/iphone/${p.slug}`,
+      url: `${SITE_URL}/${p.slug}`,
       name: p.title,
       item: {
         '@type': 'Product',
         name: p.title,
-        url: `${SITE_URL}/iphone/${p.slug}`,
+        url: `${SITE_URL}/${p.slug}`,
         image: p.thumbnailUrl,
         offers: {
           '@type': 'Offer',

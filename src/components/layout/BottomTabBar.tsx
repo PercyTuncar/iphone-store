@@ -243,15 +243,15 @@ export function BottomTabBar() {
             className={clsx(
               'flex-1 flex flex-col items-center justify-center gap-0.5',
               'text-text-secondary transition-colors duration-150',
-              isActive('/iphone') && 'text-accent'
+              pathname.match(/^\/[^\/]+$/) && !pathname.match(/^\/(blog|dashboard|admin|terminos|politica-devoluciones|iphone-en-cuotas|login|pago-exitoso)/) && 'text-accent'
             )}
           >
             <Smartphone
               size={22}
               aria-hidden="true"
-              className={isActive('/iphone') ? 'text-accent' : ''}
+              className={pathname.match(/^\/[^\/]+$/) && !pathname.match(/^\/(blog|dashboard|admin|terminos|politica-devoluciones|iphone-en-cuotas|login|pago-exitoso)/) ? 'text-accent' : ''}
             />
-            <span className={clsx('text-[10px] font-medium', isActive('/iphone') && 'text-accent')}>
+            <span className={clsx('text-[10px] font-medium', pathname.match(/^\/[^\/]+$/) && !pathname.match(/^\/(blog|dashboard|admin|terminos|politica-devoluciones|iphone-en-cuotas|login|pago-exitoso)/) && 'text-accent')}>
               iPhones
             </span>
           </button>
@@ -367,11 +367,11 @@ export function BottomTabBar() {
                 iphoneMenu.map((item) => (
                   <li key={item.slug}>
                     <Link
-                      href={`/iphone/${item.slug}`}
+                      href={`/${item.slug}`}
                       className={clsx(
                         'flex items-center justify-between py-4 text-[17px]',
                         'transition-colors duration-100',
-                        pathname === `/iphone/${item.slug}`
+                        pathname === `/${item.slug}`
                           ? 'text-accent font-medium'
                           : 'text-text-primary hover:text-accent'
                       )}

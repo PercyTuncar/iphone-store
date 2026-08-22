@@ -204,7 +204,7 @@ function ProductRow({
         {/* Actions */}
         <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
           {product.status === 'published' && (
-            <Link href={`/iphone/${product.slug}`} target="_blank" rel="noopener noreferrer">
+            <Link href={`/${product.slug}`} target="_blank" rel="noopener noreferrer">
               <Button variant="ghost" size="sm" title="Ver en el sitio">
                 <Eye size={15} aria-hidden="true" />
               </Button>

@@ -311,7 +311,7 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
         if (!next.ogTitle)    next.ogTitle    = val as string;
         if (!next.twitterTitle) next.twitterTitle = val as string;
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.iphoneencuotas.com';
-        next.canonicalUrl = `${siteUrl}/iphone/${next.slug}`;
+        next.canonicalUrl = `${siteUrl}/${next.slug}`;
       }
       // Auto-generar productGroupId desde model
       if (key === 'model' && typeof val === 'string') {
@@ -861,7 +861,7 @@ function Section8Seo({
           <Label>URL Canónica</Label>
           <input className="input mt-1 font-mono text-[14px]" value={form.canonicalUrl}
             onChange={e => setField('canonicalUrl', e.target.value)}
-            placeholder="https://iphoneencuotas.com/iphone/slug" />
+            placeholder="https://iphoneencuotas.com/slug" />
         </div>
 
         <div>
@@ -911,7 +911,7 @@ function Section8Seo({
             Vista previa en Google
           </p>
           <p className="text-[12px] text-[#006621] mb-0.5">
-            iphoneencuotas.com › iphone › {form.slug || 'slug'}
+            iphoneencuotas.com › {form.slug || 'slug'}
           </p>
           <p className={`text-[18px] text-[#1a0dab] leading-tight mb-1 ${metaTitleLen > 60 ? 'text-danger' : ''}`}>
             {form.metaTitle || 'Título del producto'}
@@ -1118,7 +1118,7 @@ function Section1BasicInfo({
             onChange={e => setField('slug', slugify(e.target.value))}
             placeholder="iphone-15-pro-max-256gb" />
           <p className="text-caption text-text-secondary mt-1">
-            URL: /iphone/{form.slug || 'slug-del-producto'}
+            URL: /{form.slug || 'slug-del-producto'}
           </p>
         </div>
         <div>
