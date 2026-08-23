@@ -545,26 +545,20 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
 
     // Validación completa SOLO al publicar
     if (status === 'published') {
-      // Validar imágenes (mínimo 3, todas propias)
-      const validImages = images.filter(img =>
-        img.url && (
-          img.url.includes('firebasestorage.googleapis.com') ||
-          img.url.includes('storage.googleapis.com')
-        )
-      );
-
-      if (validImages.length < 3) {
-        toast.error('Debes subir al menos 3 imágenes propias (alojadas en Firebase Storage) antes de publicar.');
+      // Validar imágenes (mínimo 3, incluyendo pendientes de subir)
+      // Las imágenes se subirán antes de guardar, así que contamos todas
+      if (images.length < 3) {
+        toast.error('Debes agregar al menos 3 imágenes antes de publicar.');
         setActiveTab('2');
         return;
       }
 
-      // Validar URLs externas (Apple)
+      // Validar URLs externas (Apple) - no permitidas
       const hasExternalImages = images.some(img =>
         img.url && (img.url.includes('apple.com') || img.url.includes('cdsassets.apple.com'))
       );
       if (hasExternalImages) {
-        toast.error('No puedes publicar con imágenes de Apple. Sube imágenes propias a Firebase Storage.');
+        toast.error('No puedes publicar con imágenes de Apple. Sube imágenes propias.');
         setActiveTab('2');
         return;
       }
@@ -600,9 +594,12 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
         setActiveTab('8');
         return;
       }
-      if (!form.ogImage.trim()) {
-        toast.error('La Open Graph Image es obligatoria para publicar.');
-        setActiveTab('8');
+
+      // ogImage es opcional si hay imágenes del producto
+      // Se auto-completará con la primera imagen después de subirlas
+      if (!form.ogImage.trim() && images.length === 0) {
+        toast.error('Debes tener al menos una imagen para la Open Graph Image.');
+        setActiveTab('2');
         return;
       }
 
@@ -620,7 +617,13 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
       const uploadedImages = await uploadPendingImages(images, productId || 'temp');
       setImages(uploadedImages);
 
-      const data = buildProductData(form, uploadedImages, status);
+      // Auto-completar ogImage si está vacío y hay imágenes
+      let finalForm = { ...form };
+      if (!finalForm.ogImage && uploadedImages.length > 0) {
+        finalForm.ogImage = uploadedImages[0].url;
+      }
+
+      const data = buildProductData(finalForm, uploadedImages, status);
 
       if (isEditing && productId) {
         // Al editar, solo actualizar publishedAt si cambiamos de draft a published
