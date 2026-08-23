@@ -54,6 +54,30 @@ export default function AdminProductosPage() {
 
   const filtered = filter === 'all' ? products : products.filter(p => p.status === filter);
 
+  // Agrupar productos: maestros y sus variantes
+  const groupedProducts = filtered.reduce((acc, product) => {
+    const productData = product as Product & { isVariant?: boolean; masterProductId?: string };
+
+    if (!productData.isVariant) {
+      // Es un producto maestro
+      acc.push({
+        master: product,
+        variants: filtered.filter(p => {
+          const pData = p as Product & { masterProductId?: string };
+          return pData.masterProductId === product.id;
+        }),
+      });
+    } else if (!productData.masterProductId) {
+      // Es un producto sin variantes (legacy)
+      acc.push({
+        master: product,
+        variants: [],
+      });
+    }
+    // Las variantes con masterProductId se agrupan con su maestro arriba
+    return acc;
+  }, [] as Array<{ master: Product; variants: Product[] }>);
+
   const handlePublish = async (id: string) => {
     try {
       await publishProduct(id);
@@ -137,14 +161,186 @@ export default function AdminProductosPage() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {filtered.map(product => (
-            <ProductRow
-              key={product.id}
-              product={product}
+          {groupedProducts.map(group => (
+            <ProductGroup
+              key={group.master.id}
+              master={group.master}
+              variants={group.variants}
               onPublish={handlePublish}
               onArchive={handleArchive}
               onDelete={handleDelete}
             />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProductGroup({
+  master,
+  variants,
+  onPublish,
+  onArchive,
+  onDelete,
+}: {
+  master: Product;
+  variants: Product[];
+  onPublish: (id: string) => void;
+  onArchive: (id: string) => void;
+  onDelete: (id: string, title: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const hasVariants = variants.length > 0;
+
+  return (
+    <div className="card p-4 hover:shadow-elevated transition-shadow">
+      {/* Producto Maestro */}
+      <div className="flex items-center gap-4 flex-wrap">
+        {/* Thumbnail */}
+        <div className="w-14 h-14 rounded-[10px] bg-bg-secondary overflow-hidden flex-shrink-0">
+          <AppImage
+            src={master.thumbnailUrl || '/og-default.jpg'}
+            alt={master.title}
+            width={56}
+            height={56}
+            className="object-contain w-full h-full"
+          />
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            {hasVariants && (
+              <Badge variant="info">📦 Maestro</Badge>
+            )}
+            <span className="font-semibold text-[15px] text-text-primary">{master.title}</span>
+            <Badge variant={STATUS_VARIANTS[master.status] ?? 'neutral'}>
+              {STATUS_LABELS[master.status]}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-4 text-label text-text-secondary flex-wrap">
+            {hasVariants ? (
+              <>
+                <span>{variants.length} variante{variants.length !== 1 ? 's' : ''}</span>
+                <button
+                  onClick={() => setExpanded(!expanded)}
+                  className="text-accent hover:underline"
+                >
+                  {expanded ? 'Ocultar' : 'Ver'} variantes
+                </button>
+              </>
+            ) : (
+              <>
+                <span>{master.installments} cuotas × {formatSoles(master.installmentAmount)}</span>
+                <span>Total: {formatSoles(master.priceTotal)}</span>
+                <span>Stock: {master.stock}</span>
+              </>
+            )}
+            {master.averageRating > 0 && (
+              <span className="flex items-center gap-1">
+                <Star size={12} className="text-warning fill-warning" aria-hidden="true" />
+                {master.averageRating.toFixed(1)} ({master.reviewCount})
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+          {master.status === 'published' && (
+            <Link href={`/${master.slug}`} target="_blank" rel="noopener noreferrer">
+              <Button variant="ghost" size="sm" title="Ver en el sitio">
+                <Eye size={15} aria-hidden="true" />
+              </Button>
+            </Link>
+          )}
+          <Link href={`/admin/productos/${master.id}`}>
+            <Button variant="ghost" size="sm" title="Editar">
+              <Edit2 size={15} aria-hidden="true" />
+              <span className="hidden sm:inline">Editar</span>
+            </Button>
+          </Link>
+          {master.status === 'draft' && (
+            <Button variant="primary" size="sm" onClick={() => onPublish(master.id)} title="Publicar">
+              <Eye size={15} aria-hidden="true" />
+              <span className="hidden sm:inline">Publicar</span>
+            </Button>
+          )}
+          {master.status === 'published' && (
+            <Button variant="ghost" size="sm" onClick={() => onArchive(master.id)} title="Archivar">
+              <EyeOff size={15} aria-hidden="true" />
+              <span className="hidden sm:inline">Archivar</span>
+            </Button>
+          )}
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => onDelete(master.id, master.title)}
+            title="Eliminar"
+          >
+            <Trash2 size={15} aria-hidden="true" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Variantes (expandible) */}
+      {hasVariants && expanded && (
+        <div className="mt-4 pl-[4.5rem] space-y-2 border-l-2 border-border">
+          {variants.map(variant => (
+            <div key={variant.id} className="flex items-center gap-4 flex-wrap py-2">
+              {/* Info de la variante */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="text-[14px] text-text-primary font-medium">{variant.title}</span>
+                  <Badge variant={STATUS_VARIANTS[variant.status] ?? 'neutral'} size="sm">
+                    {STATUS_LABELS[variant.status]}
+                  </Badge>
+                  {variant.condition === 'refurbished' && (variant as any).grade && (
+                    <Badge variant="info" size="sm">Grado {(variant as any).grade}</Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-4 text-caption text-text-secondary flex-wrap">
+                  <span>{variant.installments} cuotas × {formatSoles(variant.installmentAmount)}</span>
+                  <span>Total: {formatSoles(variant.priceTotal)}</span>
+                  <span>Stock: {variant.stock}</span>
+                </div>
+              </div>
+
+              {/* Actions de la variante */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {variant.status === 'published' && (
+                  <Link href={`/${variant.slug}`} target="_blank" rel="noopener noreferrer">
+                    <Button variant="ghost" size="sm" title="Ver en el sitio">
+                      <Eye size={14} aria-hidden="true" />
+                    </Button>
+                  </Link>
+                )}
+                <Link href={`/admin/productos/${variant.id}`}>
+                  <Button variant="ghost" size="sm" title="Editar">
+                    <Edit2 size={14} aria-hidden="true" />
+                  </Button>
+                </Link>
+                {variant.status === 'draft' && (
+                  <Button variant="primary" size="sm" onClick={() => onPublish(variant.id)} title="Publicar">
+                    <Eye size={14} aria-hidden="true" />
+                  </Button>
+                )}
+                {variant.status === 'published' && (
+                  <Button variant="ghost" size="sm" onClick={() => onArchive(variant.id)} title="Archivar">
+                    <EyeOff size={14} aria-hidden="true" />
+                  </Button>
+                )}
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => onDelete(variant.id, variant.title)}
+                  title="Eliminar"
+                >
+                  <Trash2 size={14} aria-hidden="true" />
+                </Button>
+              </div>
+            </div>
           ))}
         </div>
       )}

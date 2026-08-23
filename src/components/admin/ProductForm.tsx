@@ -639,6 +639,8 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
         // Al crear producto maestro nuevo, crear maestro + variantes
         const newMasterData = {
           ...data,
+          // Preservar el título original del modelo (sin storage/color)
+          title: form.model, // Solo el nombre del modelo
           // El maestro no tiene storage/color/condition específicos
           storage: '256GB' as StorageCapacity, // Valor placeholder requerido por el schema
           color: 'Varios',
@@ -1253,16 +1255,61 @@ function Section8Seo({
         <p className="text-caption text-text-secondary mb-3 font-semibold uppercase tracking-wide">
           Vista previa en Google
         </p>
-        <p className="text-[12px] text-[#006621] mb-0.5">
-          iphoneencuotas.com › {form.slug || slugify(form.model) || 'slug'}
-        </p>
-        <p className={`text-[18px] text-[#1a0dab] leading-tight mb-1 ${metaTitleLen > 60 ? 'text-danger' : ''}`}>
-          {form.metaTitle || suggestedSeo.metaTitle || 'Título del producto'}
-        </p>
-        <p className="text-[14px] text-[#545454] leading-snug line-clamp-2">
-          {form.metaDescription || suggestedSeo.metaDescription || 'Descripción del producto…'}
-        </p>
+        <div className="flex gap-4">
+          {/* Imagen preview */}
+          {(form.ogImage || firstImage) && (
+            <div className="w-24 h-24 rounded-[8px] bg-bg-tertiary overflow-hidden flex-shrink-0">
+              <img
+                src={form.ogImage || firstImage}
+                alt="Preview"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+          <div className="flex-1">
+            <p className="text-[12px] text-[#006621] mb-0.5">
+              iphoneencuotas.com › {form.slug || slugify(form.model) || 'slug'}
+            </p>
+            <p className={`text-[18px] text-[#1a0dab] leading-tight mb-1 ${metaTitleLen > 60 ? 'text-danger' : ''}`}>
+              {form.metaTitle || suggestedSeo.metaTitle || 'Título del producto'}
+            </p>
+            <p className="text-[14px] text-[#545454] leading-snug line-clamp-2">
+              {form.metaDescription || suggestedSeo.metaDescription || 'Descripción del producto…'}
+            </p>
+          </div>
+        </div>
       </div>
+
+      {/* Open Graph preview */}
+      {(form.ogImage || firstImage) && (
+        <div className="rounded-ios border border-border p-4 bg-bg-secondary">
+          <p className="text-caption text-text-secondary mb-3 font-semibold uppercase tracking-wide">
+            Vista previa Open Graph (Facebook, WhatsApp, LinkedIn)
+          </p>
+          <div className="bg-white rounded-[8px] overflow-hidden max-w-[500px]">
+            {/* Imagen OG */}
+            <div className="w-full aspect-[1.91/1] bg-bg-tertiary">
+              <img
+                src={form.ogImage || firstImage}
+                alt="OG Preview"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            {/* Contenido OG */}
+            <div className="p-3 border-t border-border">
+              <p className="text-[11px] text-[#606770] uppercase mb-1">
+                {new URL(suggestedSeo.canonicalUrl || 'https://iphoneencuotas.com').hostname}
+              </p>
+              <p className="text-[14px] text-[#1c1e21] font-semibold leading-tight mb-1 line-clamp-2">
+                {form.ogTitle || suggestedSeo.ogTitle || form.metaTitle || 'Título del producto'}
+              </p>
+              <p className="text-[12px] text-[#606770] leading-snug line-clamp-2">
+                {form.ogDescription || suggestedSeo.ogDescription || form.metaDescription || 'Descripción del producto…'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
