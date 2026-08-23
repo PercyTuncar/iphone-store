@@ -1,4 +1,4 @@
-/** Master list of iPhone models sold on the platform (iPhone 13 → 17 Pro Max) */
+/** Master list of iPhone models sold on the platform (iPhone 13 → 18 Pro Max) */
 export const IPHONE_MODELS = [
   'iPhone 13',
   'iPhone 13 mini',
@@ -20,6 +20,9 @@ export const IPHONE_MODELS = [
   'iPhone 17 Plus',
   'iPhone 17 Pro',
   'iPhone 17 Pro Max',
+  'iPhone 18',
+  'iPhone 18 Pro',
+  'iPhone 18 Pro Max',
 ] as const;
 
 export type IPhoneModel = (typeof IPHONE_MODELS)[number];
