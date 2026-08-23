@@ -214,6 +214,9 @@ export default async function IPhoneProductPage({ params, searchParams }: Props)
       isVariant: false, // Para el cliente, actúan como productos independientes
       masterProductId: null,
       masterProductSlug: null,
+
+      // Variants array vacío (no tienen sub-variantes)
+      variants: [],
     }));
 
 
