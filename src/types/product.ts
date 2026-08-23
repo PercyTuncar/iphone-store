@@ -144,4 +144,6 @@ export type ProductCard = Pick<
   | 'averageRating'
   | 'reviewCount'
   | 'status'
+  | 'productGroupId'
+  | 'isVariant'
 >;
