@@ -1373,18 +1373,6 @@ function Section1BasicInfo({
 // ═══════════════════════════════════════════════════════════
 // SECTION 2 — Imágenes
 // ═══════════════════════════════════════════════════════════
-function Section2Images({
-  images, setImages, productId,
-}: {
-  images: ImageItem[];
-  setImages: React.Dispatch<React.SetStateAction<ImageItem[]>>;
-  productId: string;
-}) {
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════
 // SECTION 2 — Imágenes
 // ═══════════════════════════════════════════════════════════
 function Section2Images({
