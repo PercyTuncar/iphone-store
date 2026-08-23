@@ -27,6 +27,12 @@ import { buildProductSchema, buildProductGroupSchema } from '@/lib/utils/schema'
 import type { Review } from '@/types/review';
 import type { FaqItem, Product, ProductClient } from '@/types/product';
 
+// CRITICAL: Configure rendering behavior for SEO
+// - dynamicParams: true = permite slugs no pre-generados (productos nuevos)
+// - revalidate: 3600 = ISR cada 1 hora (actualiza precios, stock, reviews)
+export const dynamicParams = true;
+export const revalidate = 3600;
+
 interface Props {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ variant?: string }>;
