@@ -217,7 +217,7 @@ export default async function IPhoneProductPage({ params, searchParams }: Props)
 
       // Variants array vacío (no tienen sub-variantes)
       variants: [],
-    }));
+    })) as ProductClient[];
 
 
   // Determinar variante inicial: del query param, o la primera disponible
