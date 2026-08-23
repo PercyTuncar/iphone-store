@@ -392,12 +392,20 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
 
   // Efecto para actualizar ogImage cuando cambian las imágenes
   useEffect(() => {
-    if (images.length > 0 && !form.ogImage) {
+    if (images.length > 0) {
       const firstImage = images[0].url;
-      setForm(prev => ({
-        ...prev,
-        ogImage: firstImage,
-      }));
+      // Solo usar imágenes de Firebase, no blobs temporales
+      const isFirebaseUrl = firstImage && (
+        firstImage.includes('firebasestorage.googleapis.com') ||
+        firstImage.includes('storage.googleapis.com')
+      );
+
+      if (isFirebaseUrl && !form.ogImage) {
+        setForm(prev => ({
+          ...prev,
+          ogImage: firstImage,
+        }));
+      }
     }
   }, [images, form.ogImage]);
 
@@ -1066,14 +1074,22 @@ function Section8Seo({
   const metaDescLen  = form.metaDescription.length;
 
   // Generar valores sugeridos para mostrar en placeholders
-  const firstImage = images.length > 0 ? images[0].url : '';
+  // Solo usar imágenes de Firebase (no blobs temporales)
+  const firebaseImages = images.filter(img =>
+    img.url && (
+      img.url.includes('firebasestorage.googleapis.com') ||
+      img.url.includes('storage.googleapis.com')
+    )
+  );
+  const firstImage = firebaseImages.length > 0 ? firebaseImages[0].url : '';
+
   const suggestedSeo = generateAutoSeoMetadata({
-    title: form.title,
+    title: form.title || form.model, // Usar model si title está vacío
     model: form.model,
     storage: form.storage,
     color: form.color,
     condition: form.condition,
-    slug: form.slug,
+    slug: form.slug || slugify(form.model),
     priceTotal: form.priceTotal,
     installments: form.installments,
     firstImageUrl: firstImage,
@@ -1093,6 +1109,11 @@ function Section8Seo({
         <p className="text-caption text-text-secondary mt-2">
           Cada variante también generará sus propios metadatos SEO optimizados automáticamente.
         </p>
+        {!firstImage && (
+          <p className="text-caption text-warning mt-2">
+            ⚠️ Sube y guarda imágenes en el Tab 2 para auto-completar la Open Graph Image.
+          </p>
+        )}
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
@@ -1157,9 +1178,14 @@ function Section8Seo({
           <input className="input mt-1" value={form.ogImage}
             onChange={e => setField('ogImage', e.target.value)}
             placeholder={suggestedSeo.ogImage || 'https://…/og-image.jpg (1200×630)'} />
-          {!form.ogImage && suggestedSeo.ogImage && (
+          {!form.ogImage && firstImage && (
+            <p className="text-caption text-success mt-1">
+              💡 Se usará la primera imagen del producto
+            </p>
+          )}
+          {!form.ogImage && !firstImage && (
             <p className="text-caption text-text-secondary mt-1">
-              💡 Usando primera imagen del producto
+              Sube imágenes en Tab 2 para auto-completar este campo
             </p>
           )}
         </div>
@@ -1202,22 +1228,20 @@ function Section8Seo({
       </div>
 
       {/* Google preview */}
-      {(form.metaTitle || form.slug) && (
-        <div className="rounded-ios border border-border p-4 bg-bg-secondary">
-          <p className="text-caption text-text-secondary mb-3 font-semibold uppercase tracking-wide">
-            Vista previa en Google
-          </p>
-          <p className="text-[12px] text-[#006621] mb-0.5">
-            iphoneencuotas.com › {form.slug || 'slug'}
-          </p>
-          <p className={`text-[18px] text-[#1a0dab] leading-tight mb-1 ${metaTitleLen > 60 ? 'text-danger' : ''}`}>
-            {form.metaTitle || suggestedSeo.metaTitle || 'Título del producto'}
-          </p>
-          <p className="text-[14px] text-[#545454] leading-snug line-clamp-2">
-            {form.metaDescription || suggestedSeo.metaDescription || 'Descripción del producto…'}
-          </p>
-        </div>
-      )}
+      <div className="rounded-ios border border-border p-4 bg-bg-secondary">
+        <p className="text-caption text-text-secondary mb-3 font-semibold uppercase tracking-wide">
+          Vista previa en Google
+        </p>
+        <p className="text-[12px] text-[#006621] mb-0.5">
+          iphoneencuotas.com › {form.slug || slugify(form.model) || 'slug'}
+        </p>
+        <p className={`text-[18px] text-[#1a0dab] leading-tight mb-1 ${metaTitleLen > 60 ? 'text-danger' : ''}`}>
+          {form.metaTitle || suggestedSeo.metaTitle || 'Título del producto'}
+        </p>
+        <p className="text-[14px] text-[#545454] leading-snug line-clamp-2">
+          {form.metaDescription || suggestedSeo.metaDescription || 'Descripción del producto…'}
+        </p>
+      </div>
     </div>
   );
 }
