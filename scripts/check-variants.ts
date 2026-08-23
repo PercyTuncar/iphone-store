@@ -35,7 +35,7 @@ async function checkVariants(slug: string) {
   }
 
   const productDoc = productSnap.docs[0];
-  const product = { id: productDoc.id, ...productDoc.data() };
+  const product = { id: productDoc.id, ...productDoc.data() } as any;
 
   console.log('✅ Producto encontrado:');
   console.log(`   ID: ${product.id}`);
