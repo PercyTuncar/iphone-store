@@ -13,7 +13,18 @@
       "Bash(git commit -m 'fix: add missing variant fields to buildProductData function *)",
       "Bash(git commit -m 'fix: correct BatteryHealth type casting in buildProductData *)",
       "Bash(git commit -m 'feat: add variant system UI to product form \\(Phase 2\\) *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "WebSearch",
+      "WebFetch(domain:makerkit.dev)",
+      "Read(//c/Users/tunca/OneDrive/Desktop/Github/src/app/**)",
+      "Bash(curl -I \"https://www.iphoneencuotas.com/iphone-18-pro\")",
+      "Bash(curl -s \"https://www.iphoneencuotas.com/iphone-18-pro\")",
+      "Bash(curl -s \"https://www.iphoneencuotas.com/iphone-15-pro-max\")",
+      "Read(//tmp/**)",
+      "Bash(grep -i \"canonical\" /tmp/iphone18.html | head -2)",
+      "Bash(grep -i \"og:title\\\\|og:description\" /tmp/iphone18.html | head -3)",
+      "Bash(curl -s \"https://www.iphoneencuotas.com/\")",
+      "Bash(curl -I \"https://www.iphoneencuotas.com/\")"
     ]
   }
 }

@@ -73,27 +73,23 @@ export async function generateStaticParams() {
 }
 
 /* ─── generateMetadata ────────────────────────────────────── */
-export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+/**
+ * CRITICAL FOR SEO: This function must NOT access searchParams to keep the route
+ * statically generated. Vercel marks routes that access searchParams as dynamic
+ * and applies "no-cache, no-store" headers, which prevents Google indexing.
+ *
+ * Variant-specific meta tags are handled in the page component, not here.
+ */
+export async function generateMetadata({ params }: Omit<Props, 'searchParams'>): Promise<Metadata> {
   const { slug } = await params;
-  const variantId = (await searchParams)?.variant;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.iphoneencuotas.com';
 
-  let product = await getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
   if (!product) return { title: 'Producto no encontrado' };
 
-  // Si hay parámetro variant, cargar esa variante específica para meta tags
-  if (variantId && product && !product.isVariant) {
-    const { getProductById } = await import('@/lib/firebase/products');
-    const variant = await getProductById(variantId);
-    if (variant && variant.masterProductId === product.id && variant.status === 'published') {
-      product = variant; // Usar datos de la variante para meta tags
-    }
-  }
-
-  // Canonical URL incluye ?variant= si está presente
-  const canonicalUrl = variantId
-    ? `${siteUrl}/${slug}?variant=${variantId}`
-    : product.seo.canonicalUrl;
+  // Use master product metadata for all variants
+  // This keeps the route static and indexable by Google
+  const canonicalUrl = product.seo.canonicalUrl;
 
   return {
     title:       product.seo.metaTitle,
