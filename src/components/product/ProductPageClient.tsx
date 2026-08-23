@@ -124,7 +124,7 @@ export function ProductPageClient({ product, variants = [], initialVariantId }: 
                 productTitle={product.model}
                 productSlug={product.slug}
                 variants={variantList}
-                defaultVariantId={selectedVariantId}
+                defaultVariantId={selectedVariantId ?? undefined}
                 onVariantChange={handleVariantChange}
               />
 

@@ -83,9 +83,6 @@ export interface Product {
   grade: ProductGrade | null;
   stock: number;
   batteryHealth: BatteryHealth | null;
-  priceTotal: number;
-  images: string[];
-  thumbnailUrl: string;
 
   // SEO & Schema fields
   sku: string;

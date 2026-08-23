@@ -560,6 +560,7 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
           averageRating: 0,
           reviewCount: 0,
           publishedAt: null,
+          variants: [], // Array vacío inicialmente
         });
         setProductId(id);
       }

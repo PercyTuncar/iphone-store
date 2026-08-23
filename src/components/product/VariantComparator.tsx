@@ -35,12 +35,12 @@ export function VariantComparator({ variants, onSelect, onClose }: VariantCompar
   const comparisonFields = [
     { key: 'storage', label: 'Almacenamiento' },
     { key: 'color', label: 'Color' },
-    { key: 'condition', label: 'Condición', format: (v: string) => v === 'new' ? 'Nuevo' : 'Reacondicionado' },
-    { key: 'grade', label: 'Grado estético', format: (v: string) => v ? `Grado ${v}` : '-' },
-    { key: 'batteryHealth', label: 'Batería', format: (v: number | null) => v ? `${v}%` : '-' },
-    { key: 'priceTotal', label: 'Precio', format: (v: number) => `S/ ${v.toFixed(2)}` },
-    { key: 'installmentAmount', label: 'Cuota mensual', format: (v: number) => `S/ ${v.toFixed(2)}` },
-    { key: 'stock', label: 'Stock disponible', format: (v: number) => `${v} unidades` },
+    { key: 'condition', label: 'Condición', format: (v: any) => v === 'new' ? 'Nuevo' : 'Reacondicionado' },
+    { key: 'grade', label: 'Grado estético', format: (v: any) => v ? `Grado ${v}` : '-' },
+    { key: 'batteryHealth', label: 'Batería', format: (v: any) => v ? `${v}%` : '-' },
+    { key: 'priceTotal', label: 'Precio', format: (v: any) => `S/ ${v.toFixed(2)}` },
+    { key: 'installmentAmount', label: 'Cuota mensual', format: (v: any) => `S/ ${v.toFixed(2)}` },
+    { key: 'stock', label: 'Stock disponible', format: (v: any) => `${v} unidades` },
   ];
 
   return (
