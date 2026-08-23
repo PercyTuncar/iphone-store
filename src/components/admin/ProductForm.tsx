@@ -387,32 +387,44 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
     cells: {},
   });
 
+  // Rastrear qué campos SEO fueron editados manualmente
+  const [manualSeoFields, setManualSeoFields] = useState<Set<string>>(new Set());
+
   // Auto-save timer
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Efecto para actualizar ogImage cuando cambian las imágenes
+  // Efecto para actualizar SEO cuando cambian las imágenes
   useEffect(() => {
     if (images.length > 0) {
-      const firstImage = images[0].url;
       // Solo usar imágenes de Firebase, no blobs temporales
-      const isFirebaseUrl = firstImage && (
-        firstImage.includes('firebasestorage.googleapis.com') ||
-        firstImage.includes('storage.googleapis.com')
+      const firebaseImages = images.filter(img =>
+        img.url && (
+          img.url.includes('firebasestorage.googleapis.com') ||
+          img.url.includes('storage.googleapis.com')
+        )
       );
 
-      if (isFirebaseUrl && !form.ogImage) {
+      const firstImage = firebaseImages.length > 0 ? firebaseImages[0].url : '';
+
+      if (firstImage && !manualSeoFields.has('ogImage')) {
         setForm(prev => ({
           ...prev,
           ogImage: firstImage,
         }));
       }
     }
-  }, [images, form.ogImage]);
+  }, [images, manualSeoFields]);
 
   // Auto-slug from title
   const setField = useCallback(<K extends keyof FormState>(key: K, val: FormState[K]) => {
     setForm(prev => {
       const next = { ...prev, [key]: val };
+
+      // Si es un campo SEO, marcarlo como editado manualmente
+      const seoFields = ['metaTitle', 'metaDescription', 'h1', 'canonicalUrl', 'ogTitle', 'ogDescription', 'ogImage', 'twitterTitle', 'twitterDescription'];
+      if (seoFields.includes(key as string)) {
+        setManualSeoFields(prevSet => new Set(prevSet).add(key as string));
+      }
 
       // Auto-generar slug y SKU desde title
       if (key === 'title' && typeof val === 'string') {
@@ -425,7 +437,7 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
         next.productGroupId = slugify(val);
       }
 
-      // Auto-generar metadatos SEO si los campos están vacíos
+      // Auto-generar metadatos SEO si los campos relevantes cambian
       const shouldGenerateSeo = (
         key === 'title' ||
         key === 'model' ||
@@ -437,32 +449,38 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
       );
 
       if (shouldGenerateSeo) {
-        // Solo auto-generar si los campos SEO están vacíos
-        const firstImage = images.length > 0 ? images[0].url : '';
+        // Filtrar solo imágenes de Firebase
+        const firebaseImages = images.filter(img =>
+          img.url && (
+            img.url.includes('firebasestorage.googleapis.com') ||
+            img.url.includes('storage.googleapis.com')
+          )
+        );
+        const firstImage = firebaseImages.length > 0 ? firebaseImages[0].url : '';
 
         const autoSeo = generateAutoSeoMetadata({
-          title: next.title,
+          title: next.title || next.model,
           model: next.model,
           storage: next.storage,
           color: next.color,
           condition: next.condition,
-          slug: next.slug,
+          slug: next.slug || slugify(next.model),
           priceTotal: next.priceTotal,
           installments: next.installments,
           firstImageUrl: firstImage,
           isVariant: next.isVariant,
         });
 
-        // Solo aplicar si el campo está vacío (no sobreescribir ediciones manuales)
-        if (!next.metaTitle) next.metaTitle = autoSeo.metaTitle;
-        if (!next.metaDescription) next.metaDescription = autoSeo.metaDescription;
-        if (!next.h1) next.h1 = autoSeo.h1;
-        if (!next.canonicalUrl) next.canonicalUrl = autoSeo.canonicalUrl;
-        if (!next.ogTitle) next.ogTitle = autoSeo.ogTitle;
-        if (!next.ogDescription) next.ogDescription = autoSeo.ogDescription;
-        if (!next.ogImage && autoSeo.ogImage) next.ogImage = autoSeo.ogImage;
-        if (!next.twitterTitle) next.twitterTitle = autoSeo.twitterTitle;
-        if (!next.twitterDescription) next.twitterDescription = autoSeo.twitterDescription;
+        // Solo aplicar si el campo NO fue editado manualmente
+        if (!manualSeoFields.has('metaTitle')) next.metaTitle = autoSeo.metaTitle;
+        if (!manualSeoFields.has('metaDescription')) next.metaDescription = autoSeo.metaDescription;
+        if (!manualSeoFields.has('h1')) next.h1 = autoSeo.h1;
+        if (!manualSeoFields.has('canonicalUrl')) next.canonicalUrl = autoSeo.canonicalUrl;
+        if (!manualSeoFields.has('ogTitle')) next.ogTitle = autoSeo.ogTitle;
+        if (!manualSeoFields.has('ogDescription')) next.ogDescription = autoSeo.ogDescription;
+        if (!manualSeoFields.has('ogImage') && autoSeo.ogImage) next.ogImage = autoSeo.ogImage;
+        if (!manualSeoFields.has('twitterTitle')) next.twitterTitle = autoSeo.twitterTitle;
+        if (!manualSeoFields.has('twitterDescription')) next.twitterDescription = autoSeo.twitterDescription;
       }
 
       return next;
@@ -470,7 +488,7 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
     // Queue auto-save (debounce 30s)
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => handleAutoSave(), 30000);
-  }, [images]); // eslint-disable-line
+  }, [images, manualSeoFields]); // eslint-disable-line
 
   const installmentAmount = calcInstallmentAmount(
     form.priceTotal,
