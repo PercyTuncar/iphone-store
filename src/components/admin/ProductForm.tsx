@@ -231,19 +231,19 @@ function generateAutoSeoMetadata(params: AutoSeoParams) {
   let metaTitle = '';
   if (isVariant && storage && color) {
     // Variante: incluir storage y color
-    metaTitle = `${model} ${storage} ${color} en Cuotas`;
+    metaTitle = `${model} ${storage} ${color} en Cuotas | Sin intereses`;
   } else {
     // Maestro: solo modelo
-    metaTitle = `${model} en Cuotas Sin Tarjeta`;
+    metaTitle = `${model} en Cuotas | Sin intereses`;
   }
 
   // Construir descripción
   let metaDescription = '';
   if (isVariant && storage && color && priceTotal && installments) {
     const conditionText = condition === 'new' ? 'nuevo' : 'reacondicionado';
-    metaDescription = `Compra el ${model} ${storage} ${color} ${conditionText} desde S/ ${priceTotal.toFixed(2)} en ${installments} cuotas. Paga con Yape o transferencia. ¡Aparta el tuyo hoy!`;
+    metaDescription = `Compra tu ${model} ${storage} ${color} ${conditionText} a cuotas sin intereses y sin tarjeta de crédito. Paga con Yape, transferencia o efectivo. Aprobación inmediata y entrega rápida en Lima.`;
   } else {
-    metaDescription = `Compra tu ${model} en cómodas cuotas sin tarjeta de crédito. Paga con Yape, transferencia o efectivo. Aprobación inmediata y entrega rápida en Lima.`;
+    metaDescription = `Compra tu ${model} a cuotas sin intereses y sin tarjeta de crédito. Paga con Yape, transferencia o efectivo. Aprobación inmediata y entrega rápida en Lima.`;
   }
 
   // H1
