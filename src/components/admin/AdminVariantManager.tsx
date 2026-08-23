@@ -15,6 +15,7 @@ interface VariantDraft {
   stock: number;
   priceTotal: number;
   slugSuffix: string;
+  images?: string[]; // Imágenes específicas de esta variante
 }
 
 interface AdminVariantManagerProps {
@@ -70,10 +71,15 @@ function draftFromProduct(product: Product): VariantDraft {
     stock: product.stock,
     priceTotal: product.priceTotal,
     slugSuffix: product.slug,
+    images: product.images || [],
   };
 }
 
 function createVariantPayload(masterProduct: Product, draft: VariantDraft, title: string, slug: string, status: ProductStatus = 'draft') {
+  // Usar las imágenes específicas de la variante si existen, sino heredar del maestro
+  const variantImages = draft.images && draft.images.length > 0 ? draft.images : masterProduct.images;
+  const variantThumbnail = variantImages.length > 0 ? variantImages[0] : masterProduct.thumbnailUrl;
+
   return {
     title,
     slug,
@@ -93,8 +99,8 @@ function createVariantPayload(masterProduct: Product, draft: VariantDraft, title
     isVariant: true,
     masterProductId: masterProduct.id,
     masterProductSlug: masterProduct.slug,
-    images: masterProduct.images,
-    thumbnailUrl: masterProduct.thumbnailUrl,
+    images: variantImages,
+    thumbnailUrl: variantThumbnail,
     priceTotal: draft.priceTotal,
     installments: masterProduct.installments,
     installmentAmount: calcInstallmentAmount(draft.priceTotal, masterProduct.interestRate, masterProduct.installments, masterProduct.downPayment),

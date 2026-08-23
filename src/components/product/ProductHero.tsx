@@ -8,7 +8,7 @@
  * LCP image uses priority={true} as required by PRD §18.2.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { AppImage } from '@/components/ui/AppImage';
 import { Badge } from '@/components/ui/Badge';
@@ -22,6 +22,7 @@ interface ProductHeroProps {
   selectedInstallments: number;
   onInstallmentSelect: (installments: number, calculation: InstallmentCalculation) => void;
   installmentCalculation: InstallmentCalculation | null;
+  variantSelector?: React.ReactNode;
 }
 
 export function ProductHero({
@@ -30,10 +31,16 @@ export function ProductHero({
   selectedInstallments,
   onInstallmentSelect,
   installmentCalculation,
+  variantSelector,
 }: ProductHeroProps) {
   const [activeIdx, setActiveIdx] = useState(0);
   const images = product.images?.length ? product.images : [product.thumbnailUrl || '/og-default.jpg'];
   const hasBattery = product.batteryHealth !== null && product.batteryHealth !== undefined;
+
+  // Resetear índice de imagen cuando cambie el producto (variante)
+  useEffect(() => {
+    setActiveIdx(0);
+  }, [product.id]);
 
   return (
     <section className="section-gradient">
@@ -91,6 +98,13 @@ export function ProductHero({
           <h1 className="text-[clamp(26px,4vw,40px)] font-bold leading-tight tracking-tight">
             {product.seo.h1 || product.title}
           </h1>
+
+          {/* Selector de variantes - aparece antes de pricing */}
+          {variantSelector && (
+            <div className="-mx-1">
+              {variantSelector}
+            </div>
+          )}
 
           {product.reviewCount > 0 && (
             <div className="flex items-center gap-2">

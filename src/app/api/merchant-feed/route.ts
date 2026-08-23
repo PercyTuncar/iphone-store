@@ -179,18 +179,27 @@ function generateVariantItem(variant: any, groupId: string, masterSlug: string, 
   const description = variant.seo?.metaDescription ||
     `${title}. Paga en ${variant.installments} cuotas de S/ ${variant.installmentAmount.toFixed(2)}. Stock disponible. Envío a todo Perú.`;
 
+  // Validar imágenes de Firebase Storage para la variante
+  const validImages = (variant.images || []).filter(
+    (img: string) => img.includes('firebasestorage.googleapis.com') || img.includes('storage.googleapis.com')
+  );
+
+  const mainImage = validImages[0] || variant.thumbnailUrl;
+  const additionalImages = validImages.slice(1, 11); // Máximo 10 imágenes adicionales
+
   return `    <item>
       <g:id>${escapeXml(sku)}</g:id>
       <g:title>${escapeXml(title)}</g:title>
       <g:description>${escapeXml(description)}</g:description>
       <g:link>${link}</g:link>
-      <g:image_link>${escapeXml(variant.thumbnailUrl)}</g:image_link>
+      <g:image_link>${escapeXml(mainImage)}</g:image_link>
+${additionalImages.map((img: string) => `      <g:additional_image_link>${escapeXml(img)}</g:additional_image_link>`).join('\n')}
       <g:availability>${variant.stock > 0 ? 'in_stock' : 'out_of_stock'}</g:availability>
       <g:price>${variant.priceTotal.toFixed(2)} PEN</g:price>
       <g:condition>${variant.condition === 'new' ? 'new' : 'refurbished'}</g:condition>
       <g:brand>Apple</g:brand>
-      <g:gtin>${escapeXml(variant.gtin || '')}</g:gtin>
-      <g:mpn>${escapeXml(variant.mpn || sku)}</g:mpn>
+${variant.gtin ? `      <g:gtin>${escapeXml(variant.gtin)}</g:gtin>` : ''}
+${variant.mpn ? `      <g:mpn>${escapeXml(variant.mpn)}</g:mpn>` : ''}
       <g:item_group_id>${escapeXml(groupId)}</g:item_group_id>
       <g:color>${escapeXml(variant.color)}</g:color>
       <g:size>${escapeXml(variant.storage)}</g:size>

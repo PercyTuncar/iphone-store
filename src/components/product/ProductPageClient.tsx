@@ -7,10 +7,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ProductHero } from '@/components/product/ProductHero';
-import { ProductVariantSelector } from '@/components/product/ProductVariantSelector';
+import { VariantSelectorButtons } from '@/components/product/VariantSelectorButtons';
+import { VariantComparator } from '@/components/product/VariantComparator';
 import { StickyBuyBar } from '@/components/layout/StickyBuyBar';
 import { PaymentModal } from '@/components/product/PaymentModal';
 import { calculateInstallmentPlan } from '@/lib/utils/installments';
+import { trackVariantView, trackVariantInteraction } from '@/lib/analytics/variantTracking';
 import type { Product } from '@/types/product';
 import type { InstallmentCalculation } from '@/lib/utils/installments';
 
@@ -31,23 +33,40 @@ export function ProductPageClient({ product, variants = [], initialVariantId }: 
       const urlVariant = variantList.find(v => v.id === initialVariantId);
       if (urlVariant) return urlVariant;
     }
-    // Fallback: primera con stock o primera disponible
-    return variantList.find((variant) => variant.stock > 0) ?? variantList[0] ?? product;
-  }, [variantList, product, initialVariantId]);
+    // Si NO hay initialVariantId, retornar null para que NO se seleccione nada
+    return null;
+  }, [variantList, initialVariantId]);
 
-  const [selectedVariantId, setSelectedVariantId] = useState(initialVariant.id);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(initialVariant?.id ?? null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedInstallments, setSelectedInstallments] = useState(initialVariant.installments);
+  const [comparatorOpen, setComparatorOpen] = useState(false);
+  const [selectedInstallments, setSelectedInstallments] = useState(initialVariant?.installments ?? product.installments);
   const [installmentCalculation, setInstallmentCalculation] = useState<InstallmentCalculation | null>(null);
 
   const currentProduct = useMemo(
-    () => variantList.find((variant) => variant.id === selectedVariantId) ?? product,
+    () => {
+      if (!selectedVariantId) return product;
+      return variantList.find((variant) => variant.id === selectedVariantId) ?? product;
+    },
     [variantList, selectedVariantId, product]
   );
 
   useEffect(() => {
-    setSelectedVariantId(initialVariant.id);
-  }, [initialVariant.id]);
+    if (initialVariant?.id) {
+      setSelectedVariantId(initialVariant.id);
+    }
+  }, [initialVariant?.id]);
+
+  // Track variant view cuando se carga o cambia la variante
+  useEffect(() => {
+    if (currentProduct.id && currentProduct.id !== product.id) {
+      trackVariantView(currentProduct.id, product.id, {
+        storage: currentProduct.storage,
+        color: currentProduct.color,
+        price: currentProduct.priceTotal,
+      });
+    }
+  }, [currentProduct.id, product.id, currentProduct.storage, currentProduct.color, currentProduct.priceTotal]);
 
   useEffect(() => {
     const calculation = calculateInstallmentPlan(
@@ -71,6 +90,19 @@ export function ProductPageClient({ product, variants = [], initialVariantId }: 
     setInstallmentCalculation(calculation);
   };
 
+  const handleVariantChange = (variantId: string) => {
+    setSelectedVariantId(variantId);
+
+    // Track interaction
+    const variant = variantList.find(v => v.id === variantId);
+    if (variant) {
+      trackVariantInteraction(variantId, product.id, 'variant_selected', {
+        storage: variant.storage,
+        color: variant.color,
+      });
+    }
+  };
+
   const firstPaymentAmount = selectedInstallments === 1
     ? currentProduct.priceTotal
     : (currentProduct.downPayment > 0
@@ -79,21 +111,37 @@ export function ProductPageClient({ product, variants = [], initialVariantId }: 
 
   return (
     <>
-      {variantList.length > 0 && (
-        <ProductVariantSelector
-          productTitle={product.model}
-          variants={variantList}
-          defaultVariantId={selectedVariantId}
-          onVariantChange={setSelectedVariantId}
-        />
-      )}
-
       <ProductHero
         product={currentProduct}
         onReserve={() => setModalOpen(true)}
         selectedInstallments={selectedInstallments}
         onInstallmentSelect={handleInstallmentSelect}
         installmentCalculation={installmentCalculation}
+        variantSelector={
+          variantList.length > 0 ? (
+            <div className="space-y-4">
+              <VariantSelectorButtons
+                productTitle={product.model}
+                productSlug={product.slug}
+                variants={variantList}
+                defaultVariantId={selectedVariantId}
+                onVariantChange={handleVariantChange}
+              />
+
+              {variantList.length > 1 && (
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setComparatorOpen(true)}
+                    className="btn btn-ghost text-sm"
+                  >
+                    Comparar variantes lado a lado
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : undefined
+        }
       />
 
       <StickyBuyBar
@@ -112,6 +160,14 @@ export function ProductPageClient({ product, variants = [], initialVariantId }: 
         selectedInstallments={selectedInstallments}
         installmentCalculation={installmentCalculation}
       />
+
+      {comparatorOpen && variantList.length > 1 && (
+        <VariantComparator
+          variants={variantList}
+          onSelect={handleVariantChange}
+          onClose={() => setComparatorOpen(false)}
+        />
+      )}
     </>
   );
 }

@@ -25,6 +25,7 @@ import { clsx } from 'clsx';
 import { serverTimestamp } from 'firebase/firestore';
 import { createProduct, updateProduct } from '@/lib/firebase/products';
 import { uploadProductImage } from '@/lib/firebase/storage';
+import { generateNextProductSKU } from '@/lib/firebase/sku-generator';
 import { IPHONE_MODELS, STORAGE_OPTIONS } from '@/lib/constants/iphone-models';
 import { AdminVariantManager } from '@/components/admin/AdminVariantManager';
 import { VariantMatrix, type VariantMatrixData } from '@/components/admin/VariantMatrix';
@@ -230,10 +231,10 @@ function generateAutoSeoMetadata(params: AutoSeoParams) {
   let metaTitle = '';
   if (isVariant && storage && color) {
     // Variante: incluir storage y color
-    metaTitle = `${model} ${storage} ${color} en Cuotas | iPhone en Cuotas`;
+    metaTitle = `${model} ${storage} ${color} en Cuotas`;
   } else {
     // Maestro: solo modelo
-    metaTitle = `${model} en Cuotas Sin Tarjeta | iPhone en Cuotas`;
+    metaTitle = `${model} en Cuotas Sin Tarjeta`;
   }
 
   // Construir descripción
@@ -390,8 +391,15 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
   // Rastrear qué campos SEO fueron editados manualmente
   const [manualSeoFields, setManualSeoFields] = useState<Set<string>>(new Set());
 
+  // Estado para SKU
+  const [generatingSKU, setGeneratingSKU] = useState(false);
+
   // Auto-save timer
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Determinar si estamos editando una variante o creando un maestro
+  const isEditingVariant = isEditing && form.isVariant;
+  const isCreatingMaster = !isEditing; // Nuevo producto = siempre maestro
 
   // Efecto para actualizar SEO cuando cambian las imágenes
   useEffect(() => {
@@ -414,6 +422,47 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
       }
     }
   }, [images, manualSeoFields]);
+
+  // Función para manejar cambio de modelo y auto-generar campos
+  const handleModelChange = (modelValue: string) => {
+    const generatedSlug = slugify(modelValue);
+    const generatedTitle = modelValue;
+    const generatedProductGroupId = slugify(modelValue);
+
+    setForm(prev => ({
+      ...prev,
+      model: modelValue,
+      title: generatedTitle,
+      slug: generatedSlug,
+      productGroupId: generatedProductGroupId,
+    }));
+
+    console.log('Auto-generated from model:', {
+      model: modelValue,
+      title: generatedTitle,
+      slug: generatedSlug,
+      productGroupId: generatedProductGroupId,
+    });
+  };
+
+  // Función para generar SKU secuencial
+  const handleGenerateSKU = async () => {
+    setGeneratingSKU(true);
+    try {
+      const newSKU = await generateNextProductSKU();
+      setForm(prev => ({
+        ...prev,
+        sku: newSKU,
+      }));
+      toast.success(`SKU generado: ${newSKU}`);
+      console.log('SKU generated:', newSKU);
+    } catch (error) {
+      console.error('Error generating SKU:', error);
+      toast.error('Error al generar SKU');
+    } finally {
+      setGeneratingSKU(false);
+    }
+  };
 
   // Auto-slug from title
   const setField = useCallback(<K extends keyof FormState>(key: K, val: FormState[K]) => {
@@ -536,33 +585,37 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
       }
     }
 
-    // Solo validar precio si es una variante (el maestro no necesita precio propio)
-    if (form.isVariant && form.priceTotal <= 0) {
-      toast.error('El precio total debe ser mayor a 0.');
-      setActiveTab('3');
-      return;
+    // Solo validar precio e imágenes si es una variante
+    if (form.isVariant) {
+      if (form.priceTotal <= 0) {
+        toast.error('El precio total debe ser mayor a 0.');
+        setActiveTab('3');
+        return;
+      }
+
+      // Validación completa SOLO al publicar variante
+      if (status === 'published') {
+        // Validar imágenes (mínimo 3, incluyendo pendientes de subir)
+        if (images.length < 3) {
+          toast.error('Debes agregar al menos 3 imágenes antes de publicar.');
+          setActiveTab('2');
+          return;
+        }
+
+        // Validar URLs externas (Apple) - no permitidas
+        const hasExternalImages = images.some(img =>
+          img.url && (img.url.includes('apple.com') || img.url.includes('cdsassets.apple.com'))
+        );
+        if (hasExternalImages) {
+          toast.error('No puedes publicar con imágenes de Apple. Sube imágenes propias.');
+          setActiveTab('2');
+          return;
+        }
+      }
     }
 
-    // Validación completa SOLO al publicar
+    // Validación SEO al publicar (tanto maestro como variante)
     if (status === 'published') {
-      // Validar imágenes (mínimo 3, incluyendo pendientes de subir)
-      // Las imágenes se subirán antes de guardar, así que contamos todas
-      if (images.length < 3) {
-        toast.error('Debes agregar al menos 3 imágenes antes de publicar.');
-        setActiveTab('2');
-        return;
-      }
-
-      // Validar URLs externas (Apple) - no permitidas
-      const hasExternalImages = images.some(img =>
-        img.url && (img.url.includes('apple.com') || img.url.includes('cdsassets.apple.com'))
-      );
-      if (hasExternalImages) {
-        toast.error('No puedes publicar con imágenes de Apple. Sube imágenes propias.');
-        setActiveTab('2');
-        return;
-      }
-
       // Validar campos SEO obligatorios
       if (!form.metaTitle.trim()) {
         toast.error('El Meta Title es obligatorio para publicar.');
@@ -595,16 +648,15 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
         return;
       }
 
-      // ogImage es opcional si hay imágenes del producto
-      // Se auto-completará con la primera imagen después de subirlas
-      if (!form.ogImage.trim() && images.length === 0) {
+      // ogImage solo para variantes (el maestro no tiene imágenes)
+      if (form.isVariant && !form.ogImage.trim() && images.length === 0) {
         toast.error('Debes tener al menos una imagen para la Open Graph Image.');
         setActiveTab('2');
         return;
       }
 
-      // Validar FAQ (mínimo 2 preguntas)
-      if (form.faqItems.length < 2) {
+      // Validar FAQ solo para maestros (mínimo 2 preguntas)
+      if (!form.isVariant && form.faqItems.length < 2) {
         toast.error('Debes agregar al menos 2 preguntas frecuentes antes de publicar.');
         setActiveTab('7');
         return;
@@ -636,9 +688,9 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
         toast.success(status === 'published' ? 'Producto publicado.' : 'Cambios guardados.');
         router.push('/admin/productos');
       } else {
-        // Al crear producto maestro nuevo, crear maestro + variantes
+        // Al crear producto maestro nuevo con variantes embebidas
 
-        // Calcular stock total del maestro sumando todas las variantes
+        // Construir array de variantes
         const enabledVariants = Object.entries(variantMatrixData.cells)
           .filter(([_, cell]) => cell.enabled)
           .map(([key, cell]) => {
@@ -646,118 +698,82 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
             return { color, storage: storage as StorageCapacity, ...cell };
           });
 
-        const totalStock = enabledVariants.reduce((sum, variant) => sum + variant.stock, 0);
+        if (enabledVariants.length === 0) {
+          toast.error('Debes crear al menos una variante.');
+          return;
+        }
 
-        // Obtener precio de la primera variante para mostrar en listados
-        const firstVariantPrice = enabledVariants.length > 0 ? enabledVariants[0].priceTotal : 0;
-
-        const newMasterData = {
-          ...data,
-          // Preservar el título original del modelo (sin storage/color)
-          title: form.model, // Solo el nombre del modelo
-          // El maestro no tiene storage/color/condition específicos
-          storage: '256GB' as StorageCapacity, // Valor placeholder requerido por el schema
-          color: 'Varios',
-          condition: 'new' as ProductCondition,
-          stock: totalStock, // Stock total de todas las variantes
-          priceTotal: firstVariantPrice, // Precio de la primera variante (para mostrar en listados)
-          images: [], // El maestro NO tiene imágenes propias
-          thumbnailUrl: '', // Se actualizará con la imagen de la primera variante
-          status: 'draft' as const, // El maestro siempre inicia como draft
-          averageRating: 0,
-          reviewCount: 0,
-          publishedAt: null,
-        };
-
-        const masterId = await createProduct(newMasterData);
-        setProductId(masterId);
-        toast.success('Producto maestro creado. Creando variantes...');
-
-        let variantsCreated = 0;
+        // Construir array de variantes para embeber
+        const variantsArray = [];
         let firstVariantThumbnail = '';
 
-        for (const variant of enabledVariants) {
-          const variantTitle = `${form.model} ${variant.storage} ${variant.color}${variant.grade ? ` Grado ${variant.grade}` : ''}${variant.batteryHealth ? ` ${variant.batteryHealth}%` : ''}`;
-          // NO crear slug separado - las variantes no son páginas independientes
-          const variantSlug = form.slug; // Usar el mismo slug del maestro
-          const variantSKU = `${form.model}-${variant.storage}-${variant.color}-${variant.grade || variant.condition}`.replace(/\s+/g, '-').toUpperCase();
+        for (const [index, variant] of enabledVariants.entries()) {
+          // Generar SKU derivado del maestro: PROD-000001-V01, PROD-000001-V02, etc.
+          const variantNumber = (index + 1).toString().padStart(2, '0');
+          const variantSKU = `${form.sku}-V${variantNumber}`;
 
-          // Usar las imágenes de la variante si existen, sino las del maestro
+          // Usar las imágenes de la variante si existen
           const variantImages = variant.images && variant.images.length > 0
             ? variant.images
             : uploadedImages.map(img => img.url);
 
           const firstImageUrl = variantImages.length > 0 ? variantImages[0] : '';
 
-          // Capturar thumbnail de la primera variante para actualizar el maestro
-          if (variantsCreated === 0 && firstImageUrl) {
+          // Capturar thumbnail de la primera variante
+          if (index === 0 && firstImageUrl) {
             firstVariantThumbnail = firstImageUrl;
           }
 
-          // Generar metadatos SEO automáticamente para cada variante
-          const variantSeo = generateAutoSeoMetadata({
-            title: variantTitle,
-            model: form.model,
-            storage: variant.storage,
-            color: variant.color,
-            condition: variant.condition,
-            slug: form.slug, // Mismo slug que el maestro
-            priceTotal: variant.priceTotal,
-            installments: form.installments,
-            firstImageUrl,
-            isVariant: true,
-          });
-
-          const variantData = {
-            ...newMasterData,
-            title: variantTitle,
-            slug: variantSlug, // Mismo slug que el maestro
-            sku: variantSKU,
+          // Construir objeto de variante para el array
+          const variantObj = {
+            id: `${Date.now()}-${index}`, // ID único para la variante
             storage: variant.storage,
             color: variant.color,
             condition: variant.condition,
             grade: variant.grade || null,
-            batteryHealth: variant.batteryHealth,
-            stock: variant.stock,
+            batteryHealth: variant.batteryHealth || null,
             priceTotal: variant.priceTotal,
-            images: variantImages, // Imágenes específicas de esta variante
+            stock: variant.stock,
+            sku: variantSKU,
+            images: variantImages,
             thumbnailUrl: firstImageUrl,
-            installmentAmount: calcInstallmentAmount(
-              variant.priceTotal,
-              form.interestRate / 100,
-              form.installments,
-              form.downPayment
-            ),
-            isVariant: true,
-            masterProductId: masterId,
-            masterProductSlug: form.slug,
-            status, // Las variantes heredan el status solicitado
-            publishedAt: status === 'published' ? (serverTimestamp() as any) : null,
-            // Aplicar SEO generado automáticamente
-            seo: {
-              metaTitle: variantSeo.metaTitle,
-              metaDescription: variantSeo.metaDescription,
-              h1: variantSeo.h1,
-              canonicalUrl: variantSeo.canonicalUrl,
-              ogTitle: variantSeo.ogTitle,
-              ogDescription: variantSeo.ogDescription,
-              ogImage: variantSeo.ogImage,
-              twitterTitle: variantSeo.twitterTitle,
-              twitterDescription: variantSeo.twitterDescription,
-              schemaOverride: form.schemaOverride, // Heredar schema override del maestro si existe
-            },
+            status, // Mismo status que el maestro
           };
 
-          await createProduct(variantData);
-          variantsCreated++;
+          variantsArray.push(variantObj);
         }
 
-        // Actualizar el maestro con el thumbnail de la primera variante
-        await updateProduct(masterId, {
-          thumbnailUrl: firstVariantThumbnail,
-        });
+        // Calcular stock total y precio para el maestro
+        const totalStock = variantsArray.reduce((sum, v) => sum + v.stock, 0);
+        const firstVariantPrice = variantsArray[0].priceTotal;
 
-        toast.success(`✅ Producto maestro y ${variantsCreated} variante${variantsCreated > 1 ? 's' : ''} ${status === 'published' ? 'publicadas' : 'creadas'}.`);
+        // Crear producto maestro con array de variantes embebido
+        const newMasterData = {
+          ...data,
+          title: form.model, // Solo el nombre del modelo
+          storage: '256GB' as StorageCapacity, // Placeholder
+          color: 'Varios',
+          condition: 'new' as ProductCondition,
+          stock: totalStock,
+          priceTotal: firstVariantPrice,
+          images: [],
+          thumbnailUrl: firstVariantThumbnail,
+          status,
+          averageRating: 0,
+          reviewCount: 0,
+          publishedAt: status === 'published' ? (serverTimestamp() as any) : null,
+          // ✅ ARRAY DE VARIANTES EMBEBIDO
+          variants: variantsArray,
+          // Flags para el nuevo sistema
+          isVariant: false,
+          masterProductId: null,
+          masterProductSlug: null,
+        };
+
+        const masterId = await createProduct(newMasterData);
+        setProductId(masterId);
+
+        toast.success(`✅ Producto creado con ${variantsArray.length} variante${variantsArray.length > 1 ? 's' : ''} ${status === 'published' ? 'publicadas' : 'guardadas'}.`);
         router.push('/admin/productos');
       }
     } catch (err) {
@@ -824,16 +840,121 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
       {/* Tab panels */}
       <div className="card p-6">
         {activeTab === '1' && (
-          <Section1BasicInfo form={form} setField={setField} initialProduct={initialProduct ?? null} />
+          <Section1BasicInfo
+            form={form}
+            setField={setField}
+            initialProduct={initialProduct ?? null}
+            handleModelChange={handleModelChange}
+            handleGenerateSKU={handleGenerateSKU}
+            generatingSKU={generatingSKU}
+          />
         )}
-        {activeTab === '2' && (
+        {activeTab === '2' && isEditingVariant && (
           <Section2Images images={images} setImages={setImages} productId={productId} />
         )}
-        {activeTab === '3' && (
+        {activeTab === '2' && isCreatingMaster && (
+          <div className="text-center py-12">
+            <p className="text-subtitle mb-2">📸 Imágenes por Variante</p>
+            <p className="text-body text-text-secondary mb-4">
+              El producto maestro no tiene imágenes propias.<br />
+              Cada variante tendrá sus propias imágenes específicas.
+            </p>
+            <p className="text-label text-accent">
+              💡 Las imágenes se gestionan en el <strong>Tab 9: Variantes</strong>
+            </p>
+          </div>
+        )}
+        {activeTab === '3' && isEditingVariant && (
           <Section3Pricing
             form={form} setField={setField}
             installmentAmount={installmentAmount}
           />
+        )}
+        {activeTab === '3' && isCreatingMaster && (
+          <div className="space-y-6">
+            <SectionHeader title="Políticas de Pago" icon={DollarSign} />
+
+            {/* Mensaje informativo */}
+            <div className="card p-4 bg-blue-50 border-blue-200">
+              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                <Info size={18} className="text-blue-600" />
+                Configuración Compartida
+              </h4>
+              <p className="text-body text-text-secondary">
+                Estas políticas de pago aplican a <strong>todas las variantes</strong> del producto maestro.
+                Los precios específicos se configuran por variante en el <strong>Tab 9</strong>.
+              </p>
+            </div>
+
+            {/* Políticas de Pago Compartidas */}
+            <div className="card p-6">
+              <h3 className="text-lg font-semibold mb-4">💳 Políticas de Cuotas</h3>
+
+              <div className="grid sm:grid-cols-3 gap-4">
+                <div>
+                  <Label>Número de cuotas *</Label>
+                  <input type="number" min="1" max="48" className="input mt-1"
+                    value={form.installments || ''}
+                    onChange={e => setField('installments', parseInt(e.target.value, 10) || 1)}
+                    placeholder="12" />
+                  <p className="text-caption text-text-secondary mt-1">
+                    Ej: 6, 12, 18, 24 cuotas
+                  </p>
+                </div>
+
+                <div>
+                  <Label>Tasa de interés mensual (%)</Label>
+                  <input type="number" min="0" step="0.1" max="100" className="input mt-1"
+                    value={form.interestRate ? (form.interestRate * 100).toFixed(2) : ''}
+                    onChange={e => setField('interestRate', (parseFloat(e.target.value) || 0) / 100)}
+                    placeholder="5.0" />
+                  <p className="text-caption text-text-secondary mt-1">
+                    0 = sin interés (0%)
+                  </p>
+                </div>
+
+                <div>
+                  <Label>Pago inicial (S/)</Label>
+                  <input type="number" min="0" step="1" className="input mt-1"
+                    value={form.downPayment || ''}
+                    onChange={e => setField('downPayment', parseFloat(e.target.value) || 0)}
+                    placeholder="500" />
+                  <p className="text-caption text-text-secondary mt-1">
+                    0 = sin inicial
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 p-4 bg-surface-tertiary rounded-lg">
+                <p className="text-caption text-text-secondary">
+                  <strong>Ejemplo:</strong> Si una variante cuesta S/ 4,000 con {form.installments || 12} cuotas
+                  {form.interestRate > 0 && ` al ${(form.interestRate * 100).toFixed(1)}% mensual`}
+                  {form.downPayment > 0 && ` y S/ ${form.downPayment} de inicial`}:
+                </p>
+                <p className="text-body font-semibold mt-2">
+                  → La cuota mensual se calcula automáticamente para cada variante según su precio
+                </p>
+              </div>
+            </div>
+
+            {/* Mensaje sobre precios */}
+            <div className="card p-6 bg-amber-50 border-amber-200">
+              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                <Info size={18} className="text-amber-600" />
+                💰 Precios por Variante
+              </h4>
+              <p className="text-body text-text-secondary mb-3">
+                Cada variante tiene su precio específico. Los precios se configuran en la matriz de variantes:
+              </p>
+              <div className="flex items-center gap-2 text-accent font-medium">
+                <span>→</span>
+                <span>Tab 9: Variantes</span>
+              </div>
+              <p className="text-caption text-text-secondary mt-3">
+                <strong>Ejemplo:</strong> iPhone 15 Pro 256GB puede costar S/ 4,500 mientras que 512GB cuesta S/ 5,200.
+              </p>
+            </div>
+          </div>
         )}
         {activeTab === '4' && (
           <Section4Penalties form={form} setField={setField} />
@@ -1339,8 +1460,153 @@ function Section8Seo({
           </div>
         </div>
       )}
+
+      {/* Twitter Card preview */}
+      {(form.ogImage || firstImage) && (
+        <div className="rounded-ios border border-border p-4 bg-bg-secondary">
+          <p className="text-caption text-text-secondary mb-3 font-semibold uppercase tracking-wide">
+            Vista previa Twitter Card
+          </p>
+          <div className="bg-white rounded-[14px] overflow-hidden max-w-[500px] border-2 border-[#e1e8ed]">
+            {/* Imagen Twitter */}
+            <div className="w-full aspect-[2/1] bg-bg-tertiary">
+              <img
+                src={form.ogImage || firstImage}
+                alt="Twitter Preview"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            {/* Contenido Twitter */}
+            <div className="p-3">
+              <p className="text-[13px] text-[#536471] mb-0.5">
+                {new URL(suggestedSeo.canonicalUrl || 'https://iphoneencuotas.com').hostname}
+              </p>
+              <p className="text-[15px] text-[#0f1419] font-semibold leading-tight mb-1 line-clamp-1">
+                {form.twitterTitle || suggestedSeo.twitterTitle || form.metaTitle || 'Título del producto'}
+              </p>
+              <p className="text-[13px] text-[#536471] leading-snug line-clamp-2">
+                {form.twitterDescription || suggestedSeo.twitterDescription || form.metaDescription || 'Descripción del producto…'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* JSON-LD Schema preview */}
+      <div className="rounded-ios border border-border p-4 bg-bg-secondary">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-caption text-text-secondary font-semibold uppercase tracking-wide">
+            Vista previa JSON-LD Schema
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              const schema = generateSchemaPreview();
+              navigator.clipboard.writeText(JSON.stringify(schema, null, 2));
+              toast.success('Schema copiado al portapapeles');
+            }}
+            className="text-xs text-accent hover:underline flex items-center gap-1"
+          >
+            <Download size={12} />
+            Copiar Schema
+          </button>
+        </div>
+        <div className="bg-[#1e1e1e] rounded-lg p-4 overflow-x-auto">
+          <pre className="text-[12px] text-[#d4d4d4] font-mono leading-relaxed">
+            {JSON.stringify(generateSchemaPreview(), null, 2)}
+          </pre>
+        </div>
+        <p className="text-caption text-text-secondary mt-2">
+          Este schema se genera automáticamente y se incluye en la página del producto.
+          {form.isVariant && ' Las variantes tienen schemas individuales con sus datos específicos.'}
+        </p>
+      </div>
     </div>
   );
+
+  // Función helper para generar preview del schema
+  function generateSchemaPreview() {
+    const productUrl = form.isVariant && form.masterProductSlug
+      ? `https://iphoneencuotas.com/${form.masterProductSlug}?variant=${form.slug}`
+      : `https://iphoneencuotas.com/${form.slug || slugify(form.model)}`;
+
+    return {
+      '@context': 'https://schema.org/',
+      '@type': 'Product',
+      '@id': `${productUrl}#product`,
+      name: form.title || form.model,
+      description: form.metaDescription || suggestedSeo.metaDescription,
+      url: productUrl,
+      image: firebaseImages.map(img => img.url),
+      sku: form.sku || 'SKU-AUTOGENERADO',
+      brand: {
+        '@type': 'Brand',
+        name: 'Apple',
+      },
+      manufacturer: {
+        '@type': 'Organization',
+        name: 'Apple Inc.',
+      },
+      ...(form.mpn && { model: form.mpn }),
+      category: form.category || 'Celulares y Smartphones > iPhone',
+      itemCondition: form.condition === 'new'
+        ? 'https://schema.org/NewCondition'
+        : 'https://schema.org/RefurbishedCondition',
+      availability: form.stock > 0
+        ? 'https://schema.org/InStock'
+        : 'https://schema.org/OutOfStock',
+      ...(form.isVariant && {
+        color: form.color,
+        size: form.storage,
+        additionalProperty: [
+          ...(form.batteryHealth ? [{
+            '@type': 'PropertyValue',
+            name: 'Salud de Batería',
+            value: `${form.batteryHealth}%`,
+          }] : []),
+          ...(form.grade ? [{
+            '@type': 'PropertyValue',
+            name: 'Grado',
+            value: form.grade,
+          }] : []),
+        ],
+      }),
+      ...(form.productGroupId && {
+        isVariantOf: {
+          '@type': 'ProductGroup',
+          '@id': `https://iphoneencuotas.com/#productgroup-${form.productGroupId}`,
+          productGroupID: form.productGroupId,
+          name: form.model,
+        },
+        inProductGroupWithID: form.productGroupId,
+      }),
+      offers: {
+        '@type': 'Offer',
+        '@id': `${productUrl}#offer`,
+        url: productUrl,
+        priceCurrency: 'PEN',
+        price: form.priceTotal?.toFixed(2) || '0.00',
+        priceValidUntil: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split('T')[0],
+        availability: form.stock > 0
+          ? 'https://schema.org/InStock'
+          : 'https://schema.org/OutOfStock',
+        itemCondition: form.condition === 'new'
+          ? 'https://schema.org/NewCondition'
+          : 'https://schema.org/RefurbishedCondition',
+        seller: {
+          '@type': 'Organization',
+          name: 'iPhone en Cuotas',
+        },
+        eligibleQuantity: {
+          '@type': 'QuantitativeValue',
+          value: 1,
+          maxValue: form.stock > 0 ? Math.min(form.stock, 3) : 1,
+        },
+      },
+    };
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1518,17 +1784,25 @@ function Section5Payments({
 // SECTION 1 — Información Básica
 // ═══════════════════════════════════════════════════════════
 function Section1BasicInfo({
-  form, setField, initialProduct,
-}: { form: FormState; setField: <K extends keyof FormState>(k: K, v: FormState[K]) => void; initialProduct: Product | null }) {
+  form, setField, initialProduct, handleModelChange, handleGenerateSKU, generatingSKU,
+}: {
+  form: FormState;
+  setField: <K extends keyof FormState>(k: K, v: FormState[K]) => void;
+  initialProduct: Product | null;
+  handleModelChange: (modelValue: string) => void;
+  handleGenerateSKU: () => Promise<void>;
+  generatingSKU: boolean;
+}) {
 
-  // Si es una variante (estamos editando una variante), mostrar los campos completos
-  const isVariant = initialProduct?.isVariant;
+  // Determinar el contexto: editando variante vs creando maestro
+  const isEditingVariant = initialProduct?.isVariant;
+  const isCreatingMaster = !initialProduct; // Nuevo producto sin ID = maestro
 
   return (
     <div className="space-y-5">
       <SectionHeader title="Información Básica" icon={Info} />
 
-      {!isVariant && (
+      {isCreatingMaster && (
         <div className="card p-4 bg-blue-50 border-blue-200">
           <h4 className="font-semibold mb-2 flex items-center gap-2">
             <Info size={18} className="text-blue-600" />
@@ -1536,52 +1810,35 @@ function Section1BasicInfo({
           </h4>
           <p className="text-body text-text-secondary">
             Estás creando un <strong>producto maestro</strong>. Los campos aquí definen la información común que heredarán todas las variantes.
-            Las variantes específicas (colores, capacidades, precios) se configuran en el <strong>Tab 9: Variantes</strong>.
+            Las variantes específicas (colores, capacidades, precios, stock) se configuran en el <strong>Tab 9: Variantes</strong>.
           </p>
         </div>
       )}
 
       <div className="grid sm:grid-cols-2 gap-4">
-        <div className="sm:col-span-2">
-          <Label>Título del modelo *</Label>
-          <input className="input mt-1" value={form.title}
-            onChange={e => setField('title', e.target.value)}
-            placeholder="iPhone 15 Pro - Compra en Cuotas Sin Tarjeta" />
-          <p className="text-caption text-text-secondary mt-1">
-            {isVariant ? 'Título de esta variante específica' : 'Título base del modelo (se usará como base para las variantes)'}
-          </p>
-        </div>
-
-        <div>
-          <Label>Slug base (URL) *</Label>
-          <input className="input mt-1 font-mono text-[15px]" value={form.slug}
-            onChange={e => setField('slug', slugify(e.target.value))}
-            placeholder="iphone-15-pro" />
-          <p className="text-caption text-text-secondary mt-1">
-            URL base: /{form.slug || 'slug-del-producto'}
-            {!isVariant && ' (variantes: ?variant=ID)'}
-          </p>
-        </div>
-
-        <div>
-          <Label>SKU base</Label>
-          <input className="input mt-1 font-mono text-[15px] bg-surface-secondary"
-            value={form.sku}
-            readOnly
-            placeholder="Se genera automáticamente" />
-          <p className="text-caption text-text-secondary mt-1">
-            Identificador único para Merchant Center
-          </p>
-        </div>
-
         <div>
           <Label>Modelo de iPhone *</Label>
           <select className="input mt-1" value={form.model}
-            onChange={e => setField('model', e.target.value)}>
+            onChange={e => handleModelChange(e.target.value)}>
             {IPHONE_MODELS.map(m => (
               <option key={m} value={m}>{m}</option>
             ))}
           </select>
+          <p className="text-caption text-text-secondary mt-1">
+            Selecciona el modelo. Los demás campos se generarán automáticamente.
+          </p>
+        </div>
+
+        <div>
+          <Label>Slug (URL) *</Label>
+          <input className="input mt-1 font-mono text-[15px] bg-surface-secondary"
+            value={form.slug}
+            readOnly
+            placeholder="Se genera automáticamente desde el modelo" />
+          <p className="text-caption text-text-secondary mt-1">
+            URL: /{form.slug || 'slug-del-producto'}
+            {isCreatingMaster && ' (variantes: ?variant=ID)'}
+          </p>
         </div>
 
         <div>
@@ -1595,11 +1852,54 @@ function Section1BasicInfo({
           </p>
         </div>
 
-        {/* Solo mostrar estos campos si es una variante existente */}
-        {isVariant && (
+        <div>
+          <Label>SKU (Identificador Único) *</Label>
+          <div className="flex gap-2 mt-1">
+            <input className="input font-mono text-[15px] flex-1"
+              value={form.sku}
+              onChange={e => setField('sku', e.target.value)}
+              placeholder="PROD-000001" />
+            <button
+              type="button"
+              onClick={handleGenerateSKU}
+              disabled={generatingSKU}
+              className="btn btn-secondary whitespace-nowrap"
+            >
+              {generatingSKU ? (
+                <>
+                  <span className="animate-spin mr-2">⟳</span>
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <Plus size={16} className="mr-1" />
+                  Generar SKU
+                </>
+              )}
+            </button>
+          </div>
+          <p className="text-caption text-text-secondary mt-1">
+            {isEditingVariant
+              ? 'Identificador único de esta variante'
+              : 'SKU del producto maestro (formato: PROD-000001). Las variantes tendrán SKUs derivados.'}
+          </p>
+        </div>
+
+        {/* Solo mostrar campos específicos si estamos editando una variante existente */}
+        {isEditingVariant && (
           <>
+            <div className="sm:col-span-2 pt-4 border-t border-border">
+              <h3 className="text-label font-semibold mb-1 flex items-center gap-2">
+                <Info size={16} className="text-accent" />
+                Características de esta Variante
+              </h3>
+              <p className="text-caption text-text-secondary">
+                Estos campos son específicos de esta variante individual
+              </p>
+            </div>
+
             <div>
-              <Label>Almacenamiento</Label>
+              <Label>Almacenamiento *</Label>
               <select className="input mt-1" value={form.storage}
                 onChange={e => setField('storage', e.target.value as StorageCapacity)}>
                 {STORAGE_OPTIONS.map(s => (
@@ -1608,13 +1908,13 @@ function Section1BasicInfo({
               </select>
             </div>
             <div>
-              <Label>Color</Label>
+              <Label>Color *</Label>
               <input className="input mt-1" value={form.color}
                 onChange={e => setField('color', e.target.value)}
                 placeholder="Titanio Natural" />
             </div>
             <div>
-              <Label>Condición</Label>
+              <Label>Condición *</Label>
               <select className="input mt-1" value={form.condition}
                 onChange={e => setField('condition', e.target.value as ProductCondition)}>
                 <option value="new">Nuevo</option>
@@ -1648,11 +1948,38 @@ function Section1BasicInfo({
               </>
             )}
             <div>
-              <Label>Stock disponible</Label>
+              <Label>Stock disponible *</Label>
               <input className="input mt-1" type="number" min="0" value={form.stock}
                 onChange={e => setField('stock', parseInt(e.target.value, 10) || 0)} />
             </div>
           </>
+        )}
+
+        {/* Mensaje informativo para maestro */}
+        {isCreatingMaster && (
+          <div className="sm:col-span-2 pt-4">
+            <div className="card p-6 bg-amber-50 border-amber-200">
+              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                <Info size={18} className="text-amber-600" />
+                Características Específicas por Variante
+              </h4>
+              <p className="text-body text-text-secondary mb-3">
+                El producto maestro NO tiene características específicas como almacenamiento, color, condición o stock.
+                Estas se configuran individualmente para cada variante.
+              </p>
+              <ul className="text-caption text-text-secondary space-y-1 ml-4 list-disc">
+                <li><strong>Almacenamiento y Color:</strong> Cada variante tiene su combinación (ej: 256GB Azul)</li>
+                <li><strong>Stock:</strong> El maestro suma automáticamente el stock de todas sus variantes</li>
+                <li><strong>Precio:</strong> Cada variante puede tener precio diferente</li>
+                <li><strong>Imágenes:</strong> Cada variante tiene sus propias fotos del color específico</li>
+              </ul>
+              <div className="mt-3 pt-3 border-t border-amber-300">
+                <p className="text-body font-medium text-accent">
+                  → Configura todas las variantes en el <strong>Tab 9: Variantes</strong>
+                </p>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Campos SEO/Schema (siempre visibles) */}

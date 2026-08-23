@@ -133,22 +133,98 @@ export default async function IPhoneProductPage({ params, searchParams }: Props)
   })();
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.iphoneencuotas.com';
-  const hasVariantChildren = product.isVariant === false
-    ? await getAllVariantsByMasterId(product.id).catch(() => [])
-    : [];
 
-  const variantClientProducts = hasVariantChildren.map((variant) => {
-    const { createdAt, updatedAt, publishedAt, ...rest } = variant;
-    return rest;
-  });
+  // Usar variantes embebidas en lugar de query separada
+  const variantClientProducts = (product.variants || [])
+    .filter(v => v.status === 'published')
+    .map((variant) => ({
+      // Datos de la variante
+      id: variant.id,
+      storage: variant.storage,
+      color: variant.color,
+      condition: variant.condition,
+      grade: variant.grade,
+      batteryHealth: variant.batteryHealth,
+      priceTotal: variant.priceTotal,
+      stock: variant.stock,
+      sku: variant.sku,
+      images: variant.images,
+      thumbnailUrl: variant.thumbnailUrl,
+      status: variant.status,
+
+      // Datos heredados del producto maestro
+      slug: product.slug,
+      title: `${product.model} ${variant.storage} ${variant.color}`,
+      model: product.model,
+      category: product.category,
+      brand: product.brand,
+      googleProductCategoryId: product.googleProductCategoryId,
+      productGroupId: product.productGroupId,
+      mpn: product.mpn,
+      gtin: product.gtin,
+
+      // Pricing del maestro
+      installments: product.installments,
+      installmentAmount: Math.ceil(variant.priceTotal / product.installments),
+      interestRate: product.interestRate,
+      downPayment: product.downPayment,
+
+      // Penalties del maestro
+      penaltyTier1Days: product.penaltyTier1Days,
+      penaltyTier1Amount: product.penaltyTier1Amount,
+      penaltyTier2Days: product.penaltyTier2Days,
+      penaltyTier2Amount: product.penaltyTier2Amount,
+      penaltyTier3Days: product.penaltyTier3Days,
+      penaltyTier3Amount: product.penaltyTier3Amount,
+
+      // Insurance del maestro
+      insurancePlan1Month: product.insurancePlan1Month,
+      insurancePlan2Months: product.insurancePlan2Months,
+      insurancePlan3Months: product.insurancePlan3Months,
+      insuranceCheckoutDiscount1Month: product.insuranceCheckoutDiscount1Month,
+
+      // Payment methods del maestro
+      yapeNumber: product.yapeNumber,
+      transferAccountHolder: product.transferAccountHolder,
+      transferBank: product.transferBank,
+      transferAccountNumber: product.transferAccountNumber,
+      transferCci: product.transferCci,
+      onlinePaymentLink: product.onlinePaymentLink,
+      isYapeEnabled: product.isYapeEnabled,
+      isOnlinePaymentEnabled: product.isOnlinePaymentEnabled,
+
+      // Specs del maestro
+      specs: product.specs,
+
+      // SEO ajustado por variante
+      seo: {
+        ...product.seo,
+        metaTitle: `${product.model} ${variant.storage} ${variant.color} | iPhone en Cuotas`,
+        h1: `${product.model} ${variant.storage} ${variant.color}`,
+        canonicalUrl: `${siteUrl}/${product.slug}?variant=${variant.id}`,
+      },
+
+      // Page content del maestro
+      pageContent: product.pageContent,
+
+      // Reviews
+      averageRating: product.averageRating,
+      reviewCount: product.reviewCount,
+
+      // Flags
+      isVariant: false, // Para el cliente, actúan como productos independientes
+      masterProductId: null,
+      masterProductSlug: null,
+    }));
+
 
   // Determinar variante inicial: del query param, o la primera disponible
   const initialVariantId = variantId && variantClientProducts.find(v => v.id === variantId)
     ? variantId
     : undefined;
 
-  const productSchema = hasVariantChildren.length > 0
-    ? buildProductGroupSchema(product, hasVariantChildren.map((variant) => ({
+  const productSchema = variantClientProducts.length > 0
+    ? buildProductGroupSchema(product, variantClientProducts.map((variant) => ({
         id: variant.id,
         slug: variant.slug,
         color: variant.color,
@@ -158,7 +234,7 @@ export default async function IPhoneProductPage({ params, searchParams }: Props)
         stock: variant.stock,
         condition: variant.condition,
         batteryHealth: variant.batteryHealth,
-        masterProductSlug: variant.masterProductSlug,
+        masterProductSlug: product.slug,
       })))
     : buildProductSchema(product, reviews);
 

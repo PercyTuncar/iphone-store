@@ -140,9 +140,11 @@ export async function getAllVariantsByMasterId(masterProductId: string): Promise
     collection(db, COLLECTION),
     where('isVariant', '==', true),
     where('masterProductId', '==', masterProductId),
+    where('status', '==', 'published'), // Solo variantes publicadas
     orderBy('priceTotal', 'asc')
   );
   const snap = await getDocs(q);
+  console.log(`getAllVariantsByMasterId(${masterProductId}):`, snap.size, 'variants found');
   return snap.docs.map((d) => toProduct(d.id, d.data()));
 }
 

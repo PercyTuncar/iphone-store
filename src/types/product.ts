@@ -41,33 +41,67 @@ export interface ProductPageContent {
   faqItems: FaqItem[];
 }
 
+/**
+ * ProductVariant - Datos específicos de cada variante (storage, color, etc.)
+ * Embebido como array dentro del producto maestro
+ */
+export interface ProductVariant {
+  id: string; // ID único de la variante (generado automáticamente)
+  storage: StorageCapacity;
+  color: string;
+  condition: ProductCondition;
+  grade: ProductGrade | null; // null for new devices
+  batteryHealth: BatteryHealth | null; // null para nuevos, 100-80 para reacondicionados
+
+  // Precio y stock específicos
+  priceTotal: number;
+  stock: number;
+  sku: string;
+
+  // Imágenes específicas de esta variante
+  images: string[];
+  thumbnailUrl: string;
+
+  // Estado
+  status: ProductStatus; // Cada variante puede estar publicada o en borrador
+}
+
 export interface Product {
   id: string; // Firestore document ID
   slug: string;
   status: ProductStatus;
 
-  // Basic Info
-  title: string;
+  // Basic Info (compartido por todas las variantes)
+  title: string; // Template: "iPhone 15 Pro"
   model: string;
+
+  // DEPRECATED - Solo para mantener compatibilidad temporal
+  // Estos campos se moverán a variants[]
   storage: StorageCapacity;
   color: string;
   condition: ProductCondition;
-  grade: ProductGrade | null; // null for new devices
+  grade: ProductGrade | null;
   stock: number;
+  batteryHealth: BatteryHealth | null;
+  priceTotal: number;
+  images: string[];
+  thumbnailUrl: string;
 
-  // SEO & Schema fields (nuevos - requeridos para Google)
-  sku: string; // identificador único interno
-  mpn: string | null; // Manufacturer Part Number (opcional)
-  gtin: string | null; // código de barras global (opcional, no inventar)
-  category: string; // ej. "Celulares y Smartphones > iPhone"
-  googleProductCategoryId: string; // ej. "267" (Google Product Taxonomy)
-  productGroupId: string; // mismo valor para todas las variantes de color/capacidad
+  // SEO & Schema fields
+  sku: string;
+  mpn: string | null;
+  gtin: string | null;
+  category: string;
+  googleProductCategoryId: string;
+  productGroupId: string;
 
-  // NUEVO: Sistema de Variantes
-  batteryHealth: BatteryHealth | null; // null para nuevos, 100-80 para reacondicionados
-  isVariant: boolean; // true si es variante de un maestro, false si es maestro o producto tradicional
-  masterProductId: string | null; // ID del producto maestro (null si no es variante)
-  masterProductSlug: string | null; // Slug del producto maestro (para construir URLs con ?variant=)
+  // NUEVO: Array de variantes embebidas
+  variants: ProductVariant[];
+
+  // DEPRECATED: Sistema viejo de variantes (mantener temporalmente para migración)
+  isVariant: boolean;
+  masterProductId: string | null;
+  masterProductSlug: string | null;
 
   // Images
   images: string[];
