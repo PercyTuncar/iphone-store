@@ -18,11 +18,11 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.iphoneencuotas.com'
   ),
   title: {
-    default: 'iPhone en Cuotas — Compra tu iPhone en cuotas sin tarjeta en Perú',
+    default: 'iPhone en Cuotas — Sin tarjeta de crédito',
     template: '%s | iPhone en Cuotas',
   },
   description:
-    'Compra iPhones desde el 13 hasta el 17 Pro Max en cómodas cuotas. Paga con Yape, Plin o transferencia bancaria. Entrega a todo el Perú.',
+    'Compra iPhone a cuotas desde el 13 hasta el 18 Pro Max. Paga con Yape, Plin o transferencia bancaria. Entrega a todo el Perú.',
   keywords: [
     'iphone en cuotas',
     'comprar iphone peru',
