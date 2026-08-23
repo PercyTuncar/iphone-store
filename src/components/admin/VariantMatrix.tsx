@@ -18,6 +18,7 @@ export interface VariantCell {
   grade: ProductGrade | '';
   batteryHealth: BatteryHealth | null;
   sku?: string;
+  images?: string[]; // URLs de imágenes específicas de esta variante
 }
 
 export interface VariantMatrixData {

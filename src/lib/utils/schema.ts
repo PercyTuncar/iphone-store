@@ -61,6 +61,15 @@ export function buildProductSchema(
       name: 'Apple',
     },
 
+    // NUEVO: Fabricante (recomendado por Google)
+    manufacturer: {
+      '@type': 'Organization',
+      name: 'Apple Inc.',
+    },
+
+    // NUEVO: Número de modelo (si existe)
+    ...(product.mpn && { model: product.mpn }),
+
     // Categoría
     category: product.category,
 
@@ -121,12 +130,26 @@ export function buildProductSchema(
       url: productUrl,
       priceCurrency: 'PEN',
       price: product.priceTotal.toFixed(2),
+
+      // NUEVO: Validez del precio (6 meses desde hoy)
+      priceValidUntil: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0],
+
       availability, // CRITICAL: Required by Google Merchant Center
       itemCondition,
       seller: {
         '@type': 'Organization',
         name: SITE_NAME,
       },
+
+      // NUEVO: Límite de cantidad (1 por pedido)
+      eligibleQuantity: {
+        '@type': 'QuantitativeValue',
+        value: 1,
+        maxValue: product.stock > 0 ? Math.min(product.stock, 3) : 1,
+      },
+
       // CRITICAL: Always include shipping and return policy references
       // These fields fix Google Search Console warnings
       hasMerchantReturnPolicy: {

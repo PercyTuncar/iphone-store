@@ -637,6 +637,20 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
         router.push('/admin/productos');
       } else {
         // Al crear producto maestro nuevo, crear maestro + variantes
+
+        // Calcular stock total del maestro sumando todas las variantes
+        const enabledVariants = Object.entries(variantMatrixData.cells)
+          .filter(([_, cell]) => cell.enabled)
+          .map(([key, cell]) => {
+            const [color, storage] = key.split('|');
+            return { color, storage: storage as StorageCapacity, ...cell };
+          });
+
+        const totalStock = enabledVariants.reduce((sum, variant) => sum + variant.stock, 0);
+
+        // Obtener precio de la primera variante para mostrar en listados
+        const firstVariantPrice = enabledVariants.length > 0 ? enabledVariants[0].priceTotal : 0;
+
         const newMasterData = {
           ...data,
           // Preservar el título original del modelo (sin storage/color)
@@ -645,8 +659,10 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
           storage: '256GB' as StorageCapacity, // Valor placeholder requerido por el schema
           color: 'Varios',
           condition: 'new' as ProductCondition,
-          stock: 0, // El stock está en las variantes
-          priceTotal: 0, // El precio está en las variantes
+          stock: totalStock, // Stock total de todas las variantes
+          priceTotal: firstVariantPrice, // Precio de la primera variante (para mostrar en listados)
+          images: [], // El maestro NO tiene imágenes propias
+          thumbnailUrl: '', // Se actualizará con la imagen de la primera variante
           status: 'draft' as const, // El maestro siempre inicia como draft
           averageRating: 0,
           reviewCount: 0,
@@ -657,26 +673,28 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
         setProductId(masterId);
         toast.success('Producto maestro creado. Creando variantes...');
 
-        // Crear variantes desde variantMatrixData
-        const enabledVariants = Object.entries(variantMatrixData.cells)
-          .filter(([_, cell]) => cell.enabled)
-          .map(([key, cell]) => {
-            const [color, storage] = key.split('|');
-            return { color, storage: storage as StorageCapacity, ...cell };
-          });
-
-        // Calcular stock total del maestro sumando todas las variantes
-        const totalStock = enabledVariants.reduce((sum, variant) => sum + variant.stock, 0);
-
         let variantsCreated = 0;
+        let firstVariantThumbnail = '';
+
         for (const variant of enabledVariants) {
           const variantTitle = `${form.model} ${variant.storage} ${variant.color}${variant.grade ? ` Grado ${variant.grade}` : ''}${variant.batteryHealth ? ` ${variant.batteryHealth}%` : ''}`;
           // NO crear slug separado - las variantes no son páginas independientes
           const variantSlug = form.slug; // Usar el mismo slug del maestro
           const variantSKU = `${form.model}-${variant.storage}-${variant.color}-${variant.grade || variant.condition}`.replace(/\s+/g, '-').toUpperCase();
 
+          // Usar las imágenes de la variante si existen, sino las del maestro
+          const variantImages = variant.images && variant.images.length > 0
+            ? variant.images
+            : uploadedImages.map(img => img.url);
+
+          const firstImageUrl = variantImages.length > 0 ? variantImages[0] : '';
+
+          // Capturar thumbnail de la primera variante para actualizar el maestro
+          if (variantsCreated === 0 && firstImageUrl) {
+            firstVariantThumbnail = firstImageUrl;
+          }
+
           // Generar metadatos SEO automáticamente para cada variante
-          const firstImageUrl = uploadedImages.length > 0 ? uploadedImages[0].url : '';
           const variantSeo = generateAutoSeoMetadata({
             title: variantTitle,
             model: form.model,
@@ -702,6 +720,8 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
             batteryHealth: variant.batteryHealth,
             stock: variant.stock,
             priceTotal: variant.priceTotal,
+            images: variantImages, // Imágenes específicas de esta variante
+            thumbnailUrl: firstImageUrl,
             installmentAmount: calcInstallmentAmount(
               variant.priceTotal,
               form.interestRate / 100,
@@ -732,9 +752,9 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
           variantsCreated++;
         }
 
-        // Actualizar el maestro con el stock total de todas las variantes
+        // Actualizar el maestro con el thumbnail de la primera variante
         await updateProduct(masterId, {
-          stock: totalStock,
+          thumbnailUrl: firstVariantThumbnail,
         });
 
         toast.success(`✅ Producto maestro y ${variantsCreated} variante${variantsCreated > 1 ? 's' : ''} ${status === 'published' ? 'publicadas' : 'creadas'}.`);
