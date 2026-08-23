@@ -237,6 +237,8 @@ export default async function IPhoneProductPage({ params, searchParams }: Props)
         condition: variant.condition,
         batteryHealth: variant.batteryHealth,
         masterProductSlug: product.slug,
+        images: variant.images,
+        thumbnailUrl: variant.thumbnailUrl,
       })))
     : buildProductSchema(product, reviews);
 

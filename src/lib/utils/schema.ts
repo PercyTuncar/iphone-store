@@ -206,25 +206,42 @@ export function buildProductSchema(
  * - All required fields (sku, brand, offers, availability) must be present
  */
 export function buildProductGroupSchema(
-  variant: Product,
-  siblings: Pick<Product, 'id' | 'slug' | 'color' | 'storage' | 'priceTotal' | 'sku' | 'stock' | 'condition' | 'batteryHealth' | 'masterProductSlug'>[]
+  masterProduct: Product,
+  siblings: Array<{
+    id: string;
+    slug: string;
+    color: string;
+    storage: string;
+    priceTotal: number;
+    sku: string;
+    stock: number;
+    condition: string;
+    batteryHealth: number | null;
+    masterProductSlug?: string | null;
+    images?: string[];
+    thumbnailUrl?: string;
+  }>
 ) {
-  // Si las variantes tienen masterProductSlug, usarlo; si no, usar el slug de la variante actual
-  const masterSlug = siblings[0]?.masterProductSlug || variant.masterProductSlug || variant.slug;
+  // Si las variantes tienen masterProductSlug, usarlo; si no, usar el slug del masterProduct
+  const masterSlug = siblings[0]?.masterProductSlug || masterProduct.masterProductSlug || masterProduct.slug;
 
   return {
     '@context': 'https://schema.org',
     '@type': 'ProductGroup',
-    '@id': `${SITE_URL}/#productgroup-${variant.productGroupId}`,
-    productGroupID: variant.productGroupId,
-    name: variant.model,
+    '@id': `${SITE_URL}/#productgroup-${masterProduct.productGroupId}`,
+    productGroupID: masterProduct.productGroupId,
+    name: masterProduct.model,
+    description: masterProduct.seo.metaDescription, // NUEVO: Agregar descripción al ProductGroup
     url: `${SITE_URL}/${masterSlug}`,
+    image: masterProduct.images, // NUEVO: Agregar imágenes al ProductGroup
     variesBy: ['https://schema.org/color', 'https://schema.org/size', 'https://schema.org/condition'],
     hasVariant: siblings.map((s) => ({
       '@type': 'Product',
       '@id': `${SITE_URL}/${masterSlug}?variant=${s.id}#product`,
-      name: `${variant.model} ${s.storage} ${s.color}${s.condition === 'refurbished' ? ' Reacondicionado' : ''}${s.batteryHealth ? ` ${s.batteryHealth}%` : ''}`,
+      name: `${masterProduct.model} ${s.storage} ${s.color}${s.condition === 'refurbished' ? ' Reacondicionado' : ''}${s.batteryHealth ? ` ${s.batteryHealth}%` : ''}`,
+      description: `${masterProduct.model} ${s.storage} ${s.color}. ${s.condition === 'new' ? 'Nuevo' : 'Reacondicionado'}${s.batteryHealth ? `, batería al ${s.batteryHealth}%` : ''}. ${masterProduct.seo.metaDescription}`, // NUEVO: Descripción por variante
       url: `${SITE_URL}/${masterSlug}?variant=${s.id}`,
+      image: s.images && s.images.length > 0 ? s.images : masterProduct.images, // NUEVO: Imágenes por variante
       sku: s.sku,
       brand: {
         '@type': 'Brand',
@@ -259,6 +276,13 @@ export function buildProductGroupSchema(
         itemCondition: s.condition === 'new'
           ? 'https://schema.org/NewCondition'
           : 'https://schema.org/RefurbishedCondition',
+        // NUEVO: Agregar políticas de envío y devolución
+        hasMerchantReturnPolicy: {
+          '@id': `${SITE_URL}/#returnpolicy`,
+        },
+        shippingDetails: {
+          '@id': `${SITE_URL}/#shippingpolicy`,
+        },
       },
     })),
   };
