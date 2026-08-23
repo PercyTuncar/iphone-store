@@ -1442,10 +1442,7 @@ function Section2Images({
 
   // Upload desde archivo: subir directamente a Firebase
   const addFromFile = async (files: FileList | null) => {
-    if (!files || !productId) {
-      if (!productId) toast.error('Guarda el producto primero antes de subir imágenes');
-      return;
-    }
+    if (!files) return;
 
     const toAdd = Array.from(files).slice(0, 8 - images.length);
 
@@ -1453,47 +1450,8 @@ function Section2Images({
       const tempId = `file-${Date.now()}-${Math.random()}`;
       const preview = URL.createObjectURL(file);
 
-      // Agregar preview inmediatamente
-      setImages(prev => [...prev, { url: preview, tempId }]);
-      setUploading(prev => ({ ...prev, [tempId]: 0 }));
-
-      try {
-        // Simular progreso
-        setUploading(prev => ({ ...prev, [tempId]: 30 }));
-
-        // Subir a Firebase Storage
-        const firebaseUrl = await uploadProductImage(productId, file);
-
-        setUploading(prev => ({ ...prev, [tempId]: 100 }));
-
-        // Reemplazar preview con URL real
-        setImages(prev => prev.map(img =>
-          img.tempId === tempId ? { url: firebaseUrl } : img
-        ));
-
-        // Liberar blob URL
-        URL.revokeObjectURL(preview);
-
-        toast.success('✓ Imagen subida a Firebase Storage');
-
-        setTimeout(() => {
-          setUploading(prev => {
-            const next = { ...prev };
-            delete next[tempId];
-            return next;
-          });
-        }, 1000);
-      } catch (error) {
-        console.error('Error uploading file:', error);
-        toast.error('Error al subir la imagen a Firebase');
-        setImages(prev => prev.filter(img => img.tempId !== tempId));
-        URL.revokeObjectURL(preview);
-        setUploading(prev => {
-          const next = { ...prev };
-          delete next[tempId];
-          return next;
-        });
-      }
+      // Agregar como archivo pendiente (se subirá al guardar)
+      setImages(prev => [...prev, { url: preview, file, tempId }]);
     }
   };
 
