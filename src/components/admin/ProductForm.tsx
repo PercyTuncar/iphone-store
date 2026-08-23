@@ -487,7 +487,7 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
           condition: 'new' as ProductCondition,
           stock: 0, // El stock está en las variantes
           priceTotal: 0, // El precio está en las variantes
-          status: 'draft', // El maestro siempre inicia como draft
+          status: 'draft' as const, // El maestro siempre inicia como draft
           averageRating: 0,
           reviewCount: 0,
           publishedAt: null,
