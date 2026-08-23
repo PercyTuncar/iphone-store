@@ -157,7 +157,6 @@ export default async function IPhoneProductPage({ params, searchParams }: Props)
       title: `${product.model} ${variant.storage} ${variant.color}`,
       model: product.model,
       category: product.category,
-      brand: product.brand,
       googleProductCategoryId: product.googleProductCategoryId,
       productGroupId: product.productGroupId,
       mpn: product.mpn,
