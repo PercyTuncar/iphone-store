@@ -29,6 +29,7 @@ import type { FaqItem, Product } from '@/types/product';
 
 interface Props {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ variant?: string }>;
 }
 
 // Static routes that should NOT be treated as product slugs
@@ -64,15 +65,32 @@ export async function generateStaticParams() {
 }
 
 /* ─── generateMetadata ────────────────────────────────────── */
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const variantId = (await searchParams)?.variant;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.iphoneencuotas.com';
+
+  let product = await getProductBySlug(slug);
   if (!product) return { title: 'Producto no encontrado' };
+
+  // Si hay parámetro variant, cargar esa variante específica para meta tags
+  if (variantId && product && !product.isVariant) {
+    const { getProductById } = await import('@/lib/firebase/products');
+    const variant = await getProductById(variantId);
+    if (variant && variant.masterProductId === product.id && variant.status === 'published') {
+      product = variant; // Usar datos de la variante para meta tags
+    }
+  }
+
+  // Canonical URL incluye ?variant= si está presente
+  const canonicalUrl = variantId
+    ? `${siteUrl}/${slug}?variant=${variantId}`
+    : product.seo.canonicalUrl;
 
   return {
     title:       product.seo.metaTitle,
     description: product.seo.metaDescription,
-    alternates:  { canonical: product.seo.canonicalUrl },
+    alternates:  { canonical: canonicalUrl },
     openGraph: {
       title:       product.seo.ogTitle,
       description: product.seo.ogDescription,
@@ -91,8 +109,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /* ─── Page ────────────────────────────────────────────────── */
-export default async function IPhoneProductPage({ params }: Props) {
+export default async function IPhoneProductPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const variantId = (await searchParams)?.variant;
 
   // Prevent collision with static routes
   if (RESERVED_ROUTES.includes(slug)) {
@@ -121,6 +140,11 @@ export default async function IPhoneProductPage({ params }: Props) {
     return rest;
   });
 
+  // Determinar variante inicial: del query param, o la primera disponible
+  const initialVariantId = variantId && variantClientProducts.find(v => v.id === variantId)
+    ? variantId
+    : undefined;
+
   const productSchema = hasVariantChildren.length > 0
     ? buildProductGroupSchema(product, hasVariantChildren.map((variant) => ({
         slug: variant.slug,
@@ -148,7 +172,11 @@ export default async function IPhoneProductPage({ params }: Props) {
       />
 
       {/* Interactive hero + sticky bar + payment modal */}
-      <ProductPageClient product={clientProduct} variants={variantClientProducts} />
+      <ProductPageClient
+        product={clientProduct}
+        variants={variantClientProducts}
+        initialVariantId={initialVariantId}
+      />
 
       {/* ── How payment works ── */}
       <section

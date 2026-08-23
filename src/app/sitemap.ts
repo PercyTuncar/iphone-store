@@ -35,16 +35,44 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // Product pages — one URL per published model
+  // Product pages — master products + all their variants
   let productUrls: MetadataRoute.Sitemap = [];
   try {
     const products = await getAllPublishedProducts();
-    productUrls = products.map((p) => ({
-      url: `${siteUrl}/${p.slug}`,
-      lastModified: new Date(), // TODO: usar p.updatedAt cuando esté disponible en ProductCard
-      changeFrequency: 'weekly' as const,
-      priority: 0.9,
-    }));
+
+    // Para cada producto, agregar:
+    // 1. URL del producto maestro o la variante sin parámetro
+    // 2. Si es un producto maestro con variantes, agregar URLs de cada variante
+    for (const p of products) {
+      // URL principal del producto
+      productUrls.push({
+        url: `${siteUrl}/${p.slug}`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly' as const,
+        priority: 0.9,
+      });
+
+      // Si es un producto maestro con productGroupId, obtener todas sus variantes
+      if (p.productGroupId && !p.isVariant) {
+        // Importar la función para obtener variantes
+        const { getAllVariantsByMasterId } = await import('@/lib/firebase/products');
+        try {
+          const variants = await getAllVariantsByMasterId(p.id);
+
+          // Agregar URL de cada variante con parámetro ?variant=ID
+          for (const variant of variants) {
+            productUrls.push({
+              url: `${siteUrl}/${p.slug}?variant=${variant.id}`,
+              lastModified: new Date(),
+              changeFrequency: 'weekly' as const,
+              priority: 0.85, // Ligeramente menor que el maestro
+            });
+          }
+        } catch (err) {
+          console.warn(`[sitemap] Could not load variants for product ${p.id}`);
+        }
+      }
+    }
   } catch {
     // Graceful fallback — Firebase may be unavailable at build time
     console.warn('[sitemap] Could not load products');

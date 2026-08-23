@@ -11,7 +11,9 @@
       "Bash(grep -rn \"/iphone/\\\\${\" src/components src/app --include=\"*.tsx\" --include=\"*.ts\")",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

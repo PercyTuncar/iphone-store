@@ -19,14 +19,21 @@ export type ProductClient = Omit<Product, 'createdAt' | 'updatedAt' | 'published
 interface ProductPageClientProps {
   product: ProductClient;
   variants?: ProductClient[];
+  initialVariantId?: string; // NUEVO: ID de variante desde URL ?variant=
 }
 
-export function ProductPageClient({ product, variants = [] }: ProductPageClientProps) {
+export function ProductPageClient({ product, variants = [], initialVariantId }: ProductPageClientProps) {
   const variantList = variants.length > 0 ? variants : [];
-  const initialVariant = useMemo(
-    () => variantList.find((variant) => variant.stock > 0) ?? variantList[0] ?? product,
-    [variantList, product]
-  );
+
+  // Si se proporciona initialVariantId desde URL, intentar usarlo
+  const initialVariant = useMemo(() => {
+    if (initialVariantId) {
+      const urlVariant = variantList.find(v => v.id === initialVariantId);
+      if (urlVariant) return urlVariant;
+    }
+    // Fallback: primera con stock o primera disponible
+    return variantList.find((variant) => variant.stock > 0) ?? variantList[0] ?? product;
+  }, [variantList, product, initialVariantId]);
 
   const [selectedVariantId, setSelectedVariantId] = useState(initialVariant.id);
   const [modalOpen, setModalOpen] = useState(false);

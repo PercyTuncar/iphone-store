@@ -21,6 +21,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.iphoneencuotas
  * - Includes all required Merchant Listing fields
  * - Provides shippingDetails and hasMerchantReturnPolicy
  * - Adds availability at both Product and Offer levels
+ * - Each variant gets its own complete Product schema with unique URL
  */
 export function buildProductSchema(
   product: Product,
@@ -37,11 +38,18 @@ export function buildProductSchema(
     ? 'https://schema.org/NewCondition'
     : 'https://schema.org/RefurbishedCondition';
 
+  // Para variantes, construir URL con parámetro ?variant=ID
+  const productUrl = product.isVariant && product.masterProductSlug
+    ? `${SITE_URL}/${product.masterProductSlug}?variant=${product.id}`
+    : `${SITE_URL}/${product.slug}`;
+
   const schema: Record<string, unknown> = {
     '@context': 'https://schema.org/',
     '@type': 'Product',
+    '@id': `${productUrl}#product`,
     name: product.title,
     description: product.seo.metaDescription,
+    url: productUrl,
 
     // Imágenes (mínimo 3 requeridas por Merchant Center)
     image: product.images,
@@ -65,6 +73,32 @@ export function buildProductSchema(
     // Color y especificaciones
     color: product.color,
 
+    // CRITICAL: Para variantes, agregar size (storage) y additionalProperty
+    ...(product.isVariant && {
+      size: product.storage,
+      additionalProperty: [
+        ...(product.batteryHealth
+          ? [{
+              '@type': 'PropertyValue',
+              name: 'Salud de Batería',
+              value: `${product.batteryHealth}%`,
+            }]
+          : []),
+        {
+          '@type': 'PropertyValue',
+          name: 'Condición',
+          value: product.condition === 'new' ? 'Nuevo' : 'Reacondicionado',
+        },
+        ...(product.grade
+          ? [{
+              '@type': 'PropertyValue',
+              name: 'Grado',
+              value: product.grade,
+            }]
+          : []),
+      ],
+    }),
+
     // Relación con ProductGroup (variantes)
     ...(product.productGroupId && {
       isVariantOf: {
@@ -83,7 +117,8 @@ export function buildProductSchema(
     // Offer (Sección 1.3) - ENHANCED with all Merchant Listing fields
     offers: {
       '@type': 'Offer',
-      url: `${SITE_URL}/${product.slug}`,
+      '@id': `${productUrl}#offer`,
+      url: productUrl,
       priceCurrency: 'PEN',
       price: product.priceTotal.toFixed(2),
       availability, // CRITICAL: Required by Google Merchant Center
@@ -141,43 +176,60 @@ export function buildProductSchema(
 /**
  * Schema.org ProductGroup para variantes de producto
  * Sección 1.2 del PRD
+ *
+ * CRITICAL for Google Search Console & Merchant Center:
+ * - Each variant must have complete Product schema with unique URL
+ * - Prices must match exactly between ProductGroup and individual Product pages
+ * - All required fields (sku, brand, offers, availability) must be present
  */
 export function buildProductGroupSchema(
   variant: Product,
-  siblings: Pick<Product, 'slug' | 'color' | 'storage' | 'priceTotal' | 'sku' | 'stock' | 'condition' | 'batteryHealth'>[]
+  siblings: Pick<Product, 'id' | 'slug' | 'color' | 'storage' | 'priceTotal' | 'sku' | 'stock' | 'condition' | 'batteryHealth' | 'masterProductSlug'>[]
 ) {
+  // Si las variantes tienen masterProductSlug, usarlo; si no, usar el slug de la variante actual
+  const masterSlug = siblings[0]?.masterProductSlug || variant.masterProductSlug || variant.slug;
+
   return {
     '@context': 'https://schema.org',
     '@type': 'ProductGroup',
     '@id': `${SITE_URL}/#productgroup-${variant.productGroupId}`,
     productGroupID: variant.productGroupId,
     name: variant.model,
-    url: `${SITE_URL}/${variant.slug}`,
-    variesBy: ['https://schema.org/color', 'https://schema.org/size', 'https://schema.org/Color', 'https://schema.org/condition'],
+    url: `${SITE_URL}/${masterSlug}`,
+    variesBy: ['https://schema.org/color', 'https://schema.org/size', 'https://schema.org/condition'],
     hasVariant: siblings.map((s) => ({
       '@type': 'Product',
-      name: `${variant.model} ${s.color} ${s.storage}`,
-      url: `${SITE_URL}/${s.slug}`,
+      '@id': `${SITE_URL}/${masterSlug}?variant=${s.id}#product`,
+      name: `${variant.model} ${s.storage} ${s.color}${s.condition === 'refurbished' ? ' Reacondicionado' : ''}${s.batteryHealth ? ` ${s.batteryHealth}%` : ''}`,
+      url: `${SITE_URL}/${masterSlug}?variant=${s.id}`,
       sku: s.sku,
+      brand: {
+        '@type': 'Brand',
+        name: 'Apple',
+      },
       color: s.color,
       size: s.storage,
+      itemCondition: s.condition === 'new'
+        ? 'https://schema.org/NewCondition'
+        : 'https://schema.org/RefurbishedCondition',
       additionalProperty: [
         ...(s.batteryHealth
           ? [{
               '@type': 'PropertyValue',
-              name: 'batteryHealth',
+              name: 'Salud de Batería',
               value: `${s.batteryHealth}%`,
             }]
           : []),
         {
           '@type': 'PropertyValue',
-          name: 'condition',
-          value: s.condition === 'new' ? 'new' : 'refurbished',
+          name: 'Condición',
+          value: s.condition === 'new' ? 'Nuevo' : 'Reacondicionado',
         },
       ],
       offers: {
         '@type': 'Offer',
-        url: `${SITE_URL}/${s.slug}`,
+        '@id': `${SITE_URL}/${masterSlug}?variant=${s.id}#offer`,
+        url: `${SITE_URL}/${masterSlug}?variant=${s.id}`,
         price: s.priceTotal.toFixed(2),
         priceCurrency: 'PEN',
         availability: s.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',

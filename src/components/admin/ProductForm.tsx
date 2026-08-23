@@ -68,6 +68,7 @@ interface FormState {
   batteryHealth: BatteryHealth | null;
   isVariant: boolean;
   masterProductId: string;
+  masterProductSlug: string;
   // Section 2 – Images (handled separately)
   // Section 3 – Pricing
   priceTotal: number;
@@ -124,7 +125,7 @@ const DEFAULT_STATE: FormState = {
   color: '', condition: 'new', grade: '', stock: 1,
   sku: '', mpn: '', gtin: '', category: 'Celulares y Smartphones > iPhone',
   googleProductCategoryId: '267', productGroupId: '',
-  batteryHealth: null, isVariant: false, masterProductId: '',
+  batteryHealth: null, isVariant: false, masterProductId: '', masterProductSlug: '',
   priceTotal: 0, installments: 12, interestRate: 5, downPayment: 0,
   penaltyTier1Days: 5, penaltyTier1Amount: 59,
   penaltyTier2Days: 10, penaltyTier2Amount: 79,
@@ -596,6 +597,7 @@ function buildProductData(
     batteryHealth: form.batteryHealth,
     isVariant: form.isVariant,
     masterProductId: form.masterProductId || null,
+    masterProductSlug: form.masterProductSlug || null,
     images:    imageUrls,
     thumbnailUrl: imageUrls[0] ?? '',
     priceTotal:   form.priceTotal,

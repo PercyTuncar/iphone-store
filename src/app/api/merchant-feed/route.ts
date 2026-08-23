@@ -20,13 +20,13 @@ export const revalidate = 3600; // Regenerar cada hora (Sección 3.4 - mínimo d
 export async function GET() {
   try {
     // Obtener todos los productos publicados y políticas de tienda
-    const [products, policy] = await Promise.all([
+    const [allProducts, policy] = await Promise.all([
       getAllPublishedProducts(),
       getStorePolicy(),
     ]);
 
-    // Generar XML del feed
-    const xml = generateMerchantFeedXML(products, policy);
+    // Generar XML del feed con soporte de variantes
+    const xml = await generateMerchantFeedXML(allProducts, policy);
 
     return new NextResponse(xml, {
       headers: {
@@ -40,10 +40,31 @@ export async function GET() {
   }
 }
 
-function generateMerchantFeedXML(products: any[], policy: any): string {
-  const items = products
-    .map((product) => generateProductItem(product, policy))
-    .join('\n');
+async function generateMerchantFeedXML(products: any[], policy: any): Promise<string> {
+  const items: string[] = [];
+
+  // Importar función para obtener variantes
+  const { getAllVariantsByMasterId } = await import('@/lib/firebase/products');
+
+  for (const product of products) {
+    // Si es una variante, se ignora (ya se procesó con su maestro)
+    if (product.isVariant) continue;
+
+    // Verificar si tiene variantes
+    const variants = await getAllVariantsByMasterId(product.id).catch(() => []);
+
+    if (variants.length > 0) {
+      // Es un maestro con variantes: enviar SOLO las variantes con URLs únicas
+      for (const variant of variants) {
+        if (variant.status === 'published') {
+          items.push(generateVariantItem(variant, product.productGroupId, product.slug, policy));
+        }
+      }
+    } else {
+      // Producto tradicional sin variantes: enviar normalmente
+      items.push(generateProductItem(product, policy));
+    }
+  }
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
@@ -51,7 +72,7 @@ function generateMerchantFeedXML(products: any[], policy: any): string {
     <title>iPhone en Cuotas</title>
     <link>${SITE_URL}</link>
     <description>Catálogo de iPhones en cuotas en Perú</description>
-${items}
+${items.join('\n')}
   </channel>
 </rss>`;
 }
@@ -135,4 +156,47 @@ function escapeXml(text: string | null | undefined): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
+}
+
+/**
+ * Genera un item XML para una VARIANTE de producto
+ * Cada variante se envía con URL única usando ?variant=ID
+ */
+function generateVariantItem(variant: any, groupId: string, masterSlug: string, policy: any): string {
+  const sku = variant.sku || variant.id;
+
+  // Título específico que incluye todas las características
+  const title = `${variant.model} ${variant.storage} ${variant.color}${
+    variant.condition === 'refurbished'
+      ? ` Reacondicionado Grado ${variant.grade}`
+      : ' Nuevo'
+  }${variant.batteryHealth ? ` Batería ${variant.batteryHealth}%` : ''}`;
+
+  // URL con parámetro de variante para que Google pueda indexar cada una
+  const link = `${SITE_URL}/${masterSlug}?variant=${variant.id}`;
+
+  // Descripción específica para la variante
+  const description = variant.seo?.metaDescription ||
+    `${title}. Paga en ${variant.installments} cuotas de S/ ${variant.installmentAmount.toFixed(2)}. Stock disponible. Envío a todo Perú.`;
+
+  return `    <item>
+      <g:id>${escapeXml(sku)}</g:id>
+      <g:title>${escapeXml(title)}</g:title>
+      <g:description>${escapeXml(description)}</g:description>
+      <g:link>${link}</g:link>
+      <g:image_link>${escapeXml(variant.thumbnailUrl)}</g:image_link>
+      <g:availability>${variant.stock > 0 ? 'in_stock' : 'out_of_stock'}</g:availability>
+      <g:price>${variant.priceTotal.toFixed(2)} PEN</g:price>
+      <g:condition>${variant.condition === 'new' ? 'new' : 'refurbished'}</g:condition>
+      <g:brand>Apple</g:brand>
+      <g:gtin>${escapeXml(variant.gtin || '')}</g:gtin>
+      <g:mpn>${escapeXml(variant.mpn || sku)}</g:mpn>
+      <g:item_group_id>${escapeXml(groupId)}</g:item_group_id>
+      <g:color>${escapeXml(variant.color)}</g:color>
+      <g:size>${escapeXml(variant.storage)}</g:size>
+${variant.batteryHealth ? `      <g:custom_label_0>Batería ${variant.batteryHealth}%</g:custom_label_0>\n` : ''}${variant.condition === 'refurbished' && variant.grade ? `      <g:custom_label_1>Grado ${variant.grade}</g:custom_label_1>\n` : ''}      <g:google_product_category>${variant.googleProductCategoryId || '267'}</g:google_product_category>
+      <g:product_type>${escapeXml(variant.category || 'Celulares y Smartphones > iPhone')}</g:product_type>
+${generateShippingXML(policy)}
+${generateInstallmentXML(variant)}
+    </item>`;
 }

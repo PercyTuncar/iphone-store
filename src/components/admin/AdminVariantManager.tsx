@@ -92,6 +92,7 @@ function createVariantPayload(masterProduct: Product, draft: VariantDraft, title
     batteryHealth: draft.batteryHealth,
     isVariant: true,
     masterProductId: masterProduct.id,
+    masterProductSlug: masterProduct.slug,
     images: masterProduct.images,
     thumbnailUrl: masterProduct.thumbnailUrl,
     priceTotal: draft.priceTotal,

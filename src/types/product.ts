@@ -67,6 +67,7 @@ export interface Product {
   batteryHealth: BatteryHealth | null; // null para nuevos, 100-80 para reacondicionados
   isVariant: boolean; // true si es variante de un maestro, false si es maestro o producto tradicional
   masterProductId: string | null; // ID del producto maestro (null si no es variante)
+  masterProductSlug: string | null; // Slug del producto maestro (para construir URLs con ?variant=)
 
   // Images
   images: string[];
