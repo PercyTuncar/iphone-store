@@ -241,6 +241,7 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
       batteryHealth:  (initialProduct as any).batteryHealth ?? null,
       isVariant:      (initialProduct as any).isVariant ?? false,
       masterProductId: (initialProduct as any).masterProductId ?? '',
+      masterProductSlug: (initialProduct as any).masterProductSlug ?? '',
       priceTotal:     initialProduct.priceTotal,
       installments:   initialProduct.installments,
       interestRate:   initialProduct.interestRate * 100,
