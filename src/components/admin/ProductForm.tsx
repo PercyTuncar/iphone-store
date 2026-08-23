@@ -197,6 +197,87 @@ function calcInstallmentAmount(
   return Math.round(cuota * 100) / 100;
 }
 
+// ─── Auto-generate SEO metadata ────────────────────────────────
+interface AutoSeoParams {
+  title: string;
+  model: string;
+  storage?: string;
+  color?: string;
+  condition?: string;
+  slug: string;
+  priceTotal?: number;
+  installments?: number;
+  firstImageUrl?: string;
+  isVariant?: boolean;
+}
+
+function generateAutoSeoMetadata(params: AutoSeoParams) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.iphoneencuotas.com';
+  const {
+    title,
+    model,
+    storage,
+    color,
+    condition,
+    slug,
+    priceTotal,
+    installments,
+    firstImageUrl,
+    isVariant,
+  } = params;
+
+  // Construir título descriptivo
+  let metaTitle = '';
+  if (isVariant && storage && color) {
+    // Variante: incluir storage y color
+    metaTitle = `${model} ${storage} ${color} en Cuotas | iPhone en Cuotas`;
+  } else {
+    // Maestro: solo modelo
+    metaTitle = `${model} en Cuotas Sin Tarjeta | iPhone en Cuotas`;
+  }
+
+  // Construir descripción
+  let metaDescription = '';
+  if (isVariant && storage && color && priceTotal && installments) {
+    const conditionText = condition === 'new' ? 'nuevo' : 'reacondicionado';
+    metaDescription = `Compra el ${model} ${storage} ${color} ${conditionText} desde S/ ${priceTotal.toFixed(2)} en ${installments} cuotas. Paga con Yape o transferencia. ¡Aparta el tuyo hoy!`;
+  } else {
+    metaDescription = `Compra tu ${model} en cómodas cuotas sin tarjeta de crédito. Paga con Yape, transferencia o efectivo. Aprobación inmediata y entrega rápida en Lima.`;
+  }
+
+  // H1
+  let h1 = '';
+  if (isVariant && storage && color) {
+    h1 = `Comprar ${model} ${storage} ${color} en Cuotas`;
+  } else {
+    h1 = `Comprar ${model} en Cuotas Sin Tarjeta`;
+  }
+
+  // Open Graph y Twitter
+  const ogTitle = metaTitle;
+  const ogDescription = metaDescription;
+  const twitterTitle = metaTitle;
+  const twitterDescription = metaDescription;
+
+  // Canonical URL
+  const canonicalUrl = `${siteUrl}/${slug}`;
+
+  // OG Image (primera imagen del producto si existe)
+  const ogImage = firstImageUrl || '';
+
+  return {
+    metaTitle,
+    metaDescription,
+    h1,
+    canonicalUrl,
+    ogTitle,
+    ogDescription,
+    ogImage,
+    twitterTitle,
+    twitterDescription,
+  };
+}
+
 // ─── Props ──────────────────────────────────────────────────
 interface ProductFormProps {
   initialProduct?: Product | null;
@@ -309,31 +390,79 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
   // Auto-save timer
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Efecto para actualizar ogImage cuando cambian las imágenes
+  useEffect(() => {
+    if (images.length > 0 && !form.ogImage) {
+      const firstImage = images[0].url;
+      setForm(prev => ({
+        ...prev,
+        ogImage: firstImage,
+      }));
+    }
+  }, [images, form.ogImage]);
+
   // Auto-slug from title
   const setField = useCallback(<K extends keyof FormState>(key: K, val: FormState[K]) => {
     setForm(prev => {
       const next = { ...prev, [key]: val };
+
+      // Auto-generar slug y SKU desde title
       if (key === 'title' && typeof val === 'string') {
         next.slug = slugify(val);
-        // Auto-generar SKU desde slug
         next.sku = next.slug;
-        if (!next.metaTitle)  next.metaTitle  = val as string;
-        if (!next.h1)         next.h1         = val as string;
-        if (!next.ogTitle)    next.ogTitle    = val as string;
-        if (!next.twitterTitle) next.twitterTitle = val as string;
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.iphoneencuotas.com';
-        next.canonicalUrl = `${siteUrl}/${next.slug}`;
       }
+
       // Auto-generar productGroupId desde model
       if (key === 'model' && typeof val === 'string') {
         next.productGroupId = slugify(val);
       }
+
+      // Auto-generar metadatos SEO si los campos están vacíos
+      const shouldGenerateSeo = (
+        key === 'title' ||
+        key === 'model' ||
+        key === 'storage' ||
+        key === 'color' ||
+        key === 'condition' ||
+        key === 'priceTotal' ||
+        key === 'installments'
+      );
+
+      if (shouldGenerateSeo) {
+        // Solo auto-generar si los campos SEO están vacíos
+        const firstImage = images.length > 0 ? images[0].url : '';
+
+        const autoSeo = generateAutoSeoMetadata({
+          title: next.title,
+          model: next.model,
+          storage: next.storage,
+          color: next.color,
+          condition: next.condition,
+          slug: next.slug,
+          priceTotal: next.priceTotal,
+          installments: next.installments,
+          firstImageUrl: firstImage,
+          isVariant: next.isVariant,
+        });
+
+        // Solo aplicar si el campo está vacío (no sobreescribir ediciones manuales)
+        if (!next.metaTitle) next.metaTitle = autoSeo.metaTitle;
+        if (!next.metaDescription) next.metaDescription = autoSeo.metaDescription;
+        if (!next.h1) next.h1 = autoSeo.h1;
+        if (!next.canonicalUrl) next.canonicalUrl = autoSeo.canonicalUrl;
+        if (!next.ogTitle) next.ogTitle = autoSeo.ogTitle;
+        if (!next.ogDescription) next.ogDescription = autoSeo.ogDescription;
+        if (!next.ogImage && autoSeo.ogImage) next.ogImage = autoSeo.ogImage;
+        if (!next.twitterTitle) next.twitterTitle = autoSeo.twitterTitle;
+        if (!next.twitterDescription) next.twitterDescription = autoSeo.twitterDescription;
+      }
+
       return next;
     });
     // Queue auto-save (debounce 30s)
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     autoSaveTimer.current = setTimeout(() => handleAutoSave(), 30000);
-  }, []); // eslint-disable-line
+  }, [images]); // eslint-disable-line
 
   const installmentAmount = calcInstallmentAmount(
     form.priceTotal,
@@ -511,6 +640,21 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
           const variantSlug = slugify(`${form.slug}-${variant.storage}-${variant.color}${variant.grade ? `-${variant.grade}` : ''}`);
           const variantSKU = `${form.model}-${variant.storage}-${variant.color}-${variant.grade || variant.condition}`.replace(/\s+/g, '-').toUpperCase();
 
+          // Generar metadatos SEO automáticamente para cada variante
+          const firstImageUrl = uploadedImages.length > 0 ? uploadedImages[0].url : '';
+          const variantSeo = generateAutoSeoMetadata({
+            title: variantTitle,
+            model: form.model,
+            storage: variant.storage,
+            color: variant.color,
+            condition: variant.condition,
+            slug: variantSlug,
+            priceTotal: variant.priceTotal,
+            installments: form.installments,
+            firstImageUrl,
+            isVariant: true,
+          });
+
           const variantData = {
             ...newMasterData,
             title: variantTitle,
@@ -534,6 +678,19 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
             masterProductSlug: form.slug,
             status, // Las variantes heredan el status solicitado
             publishedAt: status === 'published' ? (serverTimestamp() as any) : null,
+            // Aplicar SEO generado automáticamente
+            seo: {
+              metaTitle: variantSeo.metaTitle,
+              metaDescription: variantSeo.metaDescription,
+              h1: variantSeo.h1,
+              canonicalUrl: variantSeo.canonicalUrl,
+              ogTitle: variantSeo.ogTitle,
+              ogDescription: variantSeo.ogDescription,
+              ogImage: variantSeo.ogImage,
+              twitterTitle: variantSeo.twitterTitle,
+              twitterDescription: variantSeo.twitterDescription,
+              schemaOverride: form.schemaOverride, // Heredar schema override del maestro si existe
+            },
           };
 
           await createProduct(variantData);
@@ -631,7 +788,7 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
           <Section7Content form={form} setField={setField} />
         )}
         {activeTab === '8' && (
-          <Section8Seo form={form} setField={setField} />
+          <Section8Seo form={form} setField={setField} images={images} />
         )}
         {activeTab === '9' && (
           <Section9Variants
@@ -903,14 +1060,40 @@ function Section7Content({
 // SECTION 8 — SEO y Visibilidad
 // ═══════════════════════════════════════════════════════════
 function Section8Seo({
-  form, setField,
-}: { form: FormState; setField: <K extends keyof FormState>(k: K, v: FormState[K]) => void }) {
+  form, setField, images,
+}: { form: FormState; setField: <K extends keyof FormState>(k: K, v: FormState[K]) => void; images: ImageItem[] }) {
   const metaTitleLen = form.metaTitle.length;
   const metaDescLen  = form.metaDescription.length;
+
+  // Generar valores sugeridos para mostrar en placeholders
+  const firstImage = images.length > 0 ? images[0].url : '';
+  const suggestedSeo = generateAutoSeoMetadata({
+    title: form.title,
+    model: form.model,
+    storage: form.storage,
+    color: form.color,
+    condition: form.condition,
+    slug: form.slug,
+    priceTotal: form.priceTotal,
+    installments: form.installments,
+    firstImageUrl: firstImage,
+    isVariant: form.isVariant,
+  });
 
   return (
     <div className="space-y-6">
       <SectionHeader title="SEO y Visibilidad" icon={Search} />
+
+      {/* Info box */}
+      <div className="rounded-ios border border-accent/20 bg-accent/5 p-4">
+        <p className="text-label text-text-primary">
+          <strong>✨ Generación automática:</strong> Los campos SEO se generan automáticamente basándose en el modelo, storage, color, precio e imágenes del producto.
+          Puedes ver los valores sugeridos en los placeholders y personalizarlos si lo deseas.
+        </p>
+        <p className="text-caption text-text-secondary mt-2">
+          Cada variante también generará sus propios metadatos SEO optimizados automáticamente.
+        </p>
+      </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
@@ -923,7 +1106,12 @@ function Section8Seo({
           <input className={`input ${metaTitleLen > 60 ? 'input-error' : ''}`}
             value={form.metaTitle}
             onChange={e => setField('metaTitle', e.target.value)}
-            placeholder="Comprar iPhone 15 Pro Max en Cuotas | iPhone en Cuotas" />
+            placeholder={suggestedSeo.metaTitle} />
+          {!form.metaTitle && suggestedSeo.metaTitle && (
+            <p className="text-caption text-text-secondary mt-1">
+              💡 Sugerido: {suggestedSeo.metaTitle}
+            </p>
+          )}
         </div>
 
         <div className="sm:col-span-2">
@@ -937,52 +1125,71 @@ function Section8Seo({
             rows={3}
             value={form.metaDescription}
             onChange={e => setField('metaDescription', e.target.value)}
-            placeholder="Compra el iPhone 15 Pro Max en 12 cuotas sin tarjeta. Paga con Yape…" />
+            placeholder={suggestedSeo.metaDescription} />
+          {!form.metaDescription && suggestedSeo.metaDescription && (
+            <p className="text-caption text-text-secondary mt-1">
+              💡 Sugerido: {suggestedSeo.metaDescription}
+            </p>
+          )}
         </div>
 
         <div className="sm:col-span-2">
           <Label>H1 de la página *</Label>
           <input className="input mt-1" value={form.h1}
             onChange={e => setField('h1', e.target.value)}
-            placeholder="Comprar iPhone 15 Pro Max en Cuotas Sin Tarjeta" />
+            placeholder={suggestedSeo.h1} />
+          {!form.h1 && suggestedSeo.h1 && (
+            <p className="text-caption text-text-secondary mt-1">
+              💡 Sugerido: {suggestedSeo.h1}
+            </p>
+          )}
         </div>
 
         <div>
           <Label>URL Canónica</Label>
           <input className="input mt-1 font-mono text-[14px]" value={form.canonicalUrl}
             onChange={e => setField('canonicalUrl', e.target.value)}
-            placeholder="https://iphoneencuotas.com/slug" />
+            placeholder={suggestedSeo.canonicalUrl} />
         </div>
 
         <div>
           <Label>Open Graph Image URL</Label>
           <input className="input mt-1" value={form.ogImage}
             onChange={e => setField('ogImage', e.target.value)}
-            placeholder="https://…/og-image.jpg (1200×630)" />
+            placeholder={suggestedSeo.ogImage || 'https://…/og-image.jpg (1200×630)'} />
+          {!form.ogImage && suggestedSeo.ogImage && (
+            <p className="text-caption text-text-secondary mt-1">
+              💡 Usando primera imagen del producto
+            </p>
+          )}
         </div>
 
         <div>
           <Label>OG Title</Label>
           <input className="input mt-1" value={form.ogTitle}
-            onChange={e => setField('ogTitle', e.target.value)} />
+            onChange={e => setField('ogTitle', e.target.value)}
+            placeholder={suggestedSeo.ogTitle} />
         </div>
 
         <div>
           <Label>OG Description</Label>
           <input className="input mt-1" value={form.ogDescription}
-            onChange={e => setField('ogDescription', e.target.value)} />
+            onChange={e => setField('ogDescription', e.target.value)}
+            placeholder={suggestedSeo.ogDescription} />
         </div>
 
         <div>
           <Label>Twitter Card Title</Label>
           <input className="input mt-1" value={form.twitterTitle}
-            onChange={e => setField('twitterTitle', e.target.value)} />
+            onChange={e => setField('twitterTitle', e.target.value)}
+            placeholder={suggestedSeo.twitterTitle} />
         </div>
 
         <div>
           <Label>Twitter Card Description</Label>
           <input className="input mt-1" value={form.twitterDescription}
-            onChange={e => setField('twitterDescription', e.target.value)} />
+            onChange={e => setField('twitterDescription', e.target.value)}
+            placeholder={suggestedSeo.twitterDescription} />
         </div>
 
         <div className="sm:col-span-2">
@@ -1004,10 +1211,10 @@ function Section8Seo({
             iphoneencuotas.com › {form.slug || 'slug'}
           </p>
           <p className={`text-[18px] text-[#1a0dab] leading-tight mb-1 ${metaTitleLen > 60 ? 'text-danger' : ''}`}>
-            {form.metaTitle || 'Título del producto'}
+            {form.metaTitle || suggestedSeo.metaTitle || 'Título del producto'}
           </p>
           <p className="text-[14px] text-[#545454] leading-snug line-clamp-2">
-            {form.metaDescription || 'Descripción del producto…'}
+            {form.metaDescription || suggestedSeo.metaDescription || 'Descripción del producto…'}
           </p>
         </div>
       )}
