@@ -147,6 +147,7 @@ export default async function IPhoneProductPage({ params, searchParams }: Props)
 
   const productSchema = hasVariantChildren.length > 0
     ? buildProductGroupSchema(product, hasVariantChildren.map((variant) => ({
+        id: variant.id,
         slug: variant.slug,
         color: variant.color,
         storage: variant.storage,
@@ -155,6 +156,7 @@ export default async function IPhoneProductPage({ params, searchParams }: Props)
         stock: variant.stock,
         condition: variant.condition,
         batteryHealth: variant.batteryHealth,
+        masterProductSlug: variant.masterProductSlug,
       })))
     : buildProductSchema(product, reviews);
 
