@@ -665,10 +665,14 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
             return { color, storage: storage as StorageCapacity, ...cell };
           });
 
+        // Calcular stock total del maestro sumando todas las variantes
+        const totalStock = enabledVariants.reduce((sum, variant) => sum + variant.stock, 0);
+
         let variantsCreated = 0;
         for (const variant of enabledVariants) {
           const variantTitle = `${form.model} ${variant.storage} ${variant.color}${variant.grade ? ` Grado ${variant.grade}` : ''}${variant.batteryHealth ? ` ${variant.batteryHealth}%` : ''}`;
-          const variantSlug = slugify(`${form.slug}-${variant.storage}-${variant.color}${variant.grade ? `-${variant.grade}` : ''}`);
+          // NO crear slug separado - las variantes no son páginas independientes
+          const variantSlug = form.slug; // Usar el mismo slug del maestro
           const variantSKU = `${form.model}-${variant.storage}-${variant.color}-${variant.grade || variant.condition}`.replace(/\s+/g, '-').toUpperCase();
 
           // Generar metadatos SEO automáticamente para cada variante
@@ -679,7 +683,7 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
             storage: variant.storage,
             color: variant.color,
             condition: variant.condition,
-            slug: variantSlug,
+            slug: form.slug, // Mismo slug que el maestro
             priceTotal: variant.priceTotal,
             installments: form.installments,
             firstImageUrl,
@@ -689,7 +693,7 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
           const variantData = {
             ...newMasterData,
             title: variantTitle,
-            slug: variantSlug,
+            slug: variantSlug, // Mismo slug que el maestro
             sku: variantSKU,
             storage: variant.storage,
             color: variant.color,
@@ -727,6 +731,11 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
           await createProduct(variantData);
           variantsCreated++;
         }
+
+        // Actualizar el maestro con el stock total de todas las variantes
+        await updateProduct(masterId, {
+          stock: totalStock,
+        });
 
         toast.success(`✅ Producto maestro y ${variantsCreated} variante${variantsCreated > 1 ? 's' : ''} ${status === 'published' ? 'publicadas' : 'creadas'}.`);
         router.push('/admin/productos');

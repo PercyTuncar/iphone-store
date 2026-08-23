@@ -50,11 +50,13 @@ const RESERVED_ROUTES = [
 /**
  * Pre-generates all product pages at build time for optimal SEO.
  * Critical: Without this, Google may not discover dynamic routes.
+ * Solo genera páginas para productos maestros, no variantes individuales.
  */
 export async function generateStaticParams() {
   try {
     const { getAllPublishedProducts } = await import('@/lib/firebase/products');
     const products = await getAllPublishedProducts();
+    // getAllPublishedProducts ya filtra solo maestros (isVariant: false)
     return products.map((product) => ({
       slug: product.slug,
     }));

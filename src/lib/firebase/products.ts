@@ -44,6 +44,7 @@ export async function getAllPublishedProducts(): Promise<ProductCard[]> {
   const q = query(
     collection(db, COLLECTION),
     where('status', '==', 'published'),
+    where('isVariant', '==', false), // Solo productos maestros, no variantes
     orderBy('publishedAt', 'desc')
   );
   const snap = await getDocs(q);
