@@ -293,11 +293,11 @@ function ProductGroup({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <span className="text-[14px] text-text-primary font-medium">{variant.title}</span>
-                  <Badge variant={STATUS_VARIANTS[variant.status] ?? 'neutral'} size="sm">
+                  <Badge variant={STATUS_VARIANTS[variant.status] ?? 'neutral'}>
                     {STATUS_LABELS[variant.status]}
                   </Badge>
                   {variant.condition === 'refurbished' && (variant as any).grade && (
-                    <Badge variant="info" size="sm">Grado {(variant as any).grade}</Badge>
+                    <Badge variant="info">Grado {(variant as any).grade}</Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-4 text-caption text-text-secondary flex-wrap">
