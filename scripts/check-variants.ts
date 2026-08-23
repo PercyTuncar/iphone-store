@@ -74,7 +74,7 @@ async function checkVariants(slug: string) {
   console.log(`✅ Se encontraron ${variantSnap.size} variantes:\n`);
 
   variantSnap.docs.forEach((doc, index) => {
-    const variant = { id: doc.id, ...doc.data() };
+    const variant = { id: doc.id, ...doc.data() } as any;
     console.log(`${index + 1}. Variante:`);
     console.log(`   ID: ${variant.id}`);
     console.log(`   Storage: ${variant.storage}`);
