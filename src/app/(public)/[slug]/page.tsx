@@ -25,7 +25,7 @@ import { JsonLd } from '@/components/seo/JsonLd';
 import { BreadcrumbSchema } from '@/components/seo/BreadcrumbSchema';
 import { buildProductSchema, buildProductGroupSchema } from '@/lib/utils/schema';
 import type { Review } from '@/types/review';
-import type { FaqItem, Product } from '@/types/product';
+import type { FaqItem, Product, ProductClient } from '@/types/product';
 
 interface Props {
   params: Promise<{ slug: string }>;
