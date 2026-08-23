@@ -27,12 +27,13 @@ import { createProduct, updateProduct } from '@/lib/firebase/products';
 import { uploadProductImage } from '@/lib/firebase/storage';
 import { IPHONE_MODELS, STORAGE_OPTIONS } from '@/lib/constants/iphone-models';
 import { AdminVariantManager } from '@/components/admin/AdminVariantManager';
+import { VariantMatrix, type VariantMatrixData } from '@/components/admin/VariantMatrix';
 import { Button } from '@/components/ui/Button';
 import { toast } from '@/components/ui/Toast';
 import type { Product, ProductCondition, ProductGrade, StorageCapacity, BatteryHealth } from '@/types/product';
 
 // ─── Types ──────────────────────────────────────────────────
-type TabId = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8';
+type TabId = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
 
 interface ImageItem {
   url: string;
@@ -211,6 +212,7 @@ const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: '6', label: 'Specs',         icon: Cpu         },
   { id: '7', label: 'Contenido',     icon: FileText    },
   { id: '8', label: 'SEO',           icon: Search      },
+  { id: '9', label: 'Variantes',     icon: Plus        },
 ];
 
 // ─── Main Component ─────────────────────────────────────────
@@ -297,6 +299,13 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const [productId, setProductId]   = useState<string>(initialProduct?.id ?? '');
 
+  // Estado para variantes (nuevo sistema matricial)
+  const [variantMatrixData, setVariantMatrixData] = useState<VariantMatrixData>({
+    colors: [],
+    storages: [],
+    cells: {},
+  });
+
   // Auto-save timer
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -360,9 +369,26 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
     // Validación básica (siempre requerida)
     if (!form.title.trim()) { toast.error('El título es obligatorio.'); setActiveTab('1'); return; }
     if (!form.slug.trim())  { toast.error('El slug es obligatorio.'); setActiveTab('1'); return; }
-    if (form.priceTotal <= 0) { toast.error('El precio total debe ser mayor a 0.'); setActiveTab('3'); return; }
 
-    // Validación completa SOLO al publicar (Bug #4 fix)
+    // Si es un producto maestro nuevo (no variante), validar que tenga variantes
+    const isCreatingMaster = !isEditing && !form.isVariant;
+    if (isCreatingMaster) {
+      const enabledVariants = Object.values(variantMatrixData.cells).filter(cell => cell.enabled);
+      if (enabledVariants.length === 0) {
+        toast.error('Debes crear al menos una variante en el Tab 9 antes de guardar.');
+        setActiveTab('9');
+        return;
+      }
+    }
+
+    // Solo validar precio si es una variante (el maestro no necesita precio propio)
+    if (form.isVariant && form.priceTotal <= 0) {
+      toast.error('El precio total debe ser mayor a 0.');
+      setActiveTab('3');
+      return;
+    }
+
+    // Validación completa SOLO al publicar
     if (status === 'published') {
       // Validar imágenes (mínimo 3, todas propias)
       const validImages = images.filter(img =>
@@ -450,21 +476,73 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
           await updateProduct(productId, { ...data });
         }
         toast.success(status === 'published' ? 'Producto publicado.' : 'Cambios guardados.');
+        router.push('/admin/productos');
       } else {
-        // Al crear, siempre incluir publishedAt si se publica directamente
-        const newProductData = {
+        // Al crear producto maestro nuevo, crear maestro + variantes
+        const newMasterData = {
           ...data,
-          status,
+          // El maestro no tiene storage/color/condition específicos
+          storage: '256GB' as StorageCapacity, // Valor placeholder requerido por el schema
+          color: 'Varios',
+          condition: 'new' as ProductCondition,
+          stock: 0, // El stock está en las variantes
+          priceTotal: 0, // El precio está en las variantes
+          status: 'draft', // El maestro siempre inicia como draft
           averageRating: 0,
           reviewCount: 0,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          publishedAt: status === 'published' ? (serverTimestamp() as any) : null,
+          publishedAt: null,
         };
-        const id = await createProduct(newProductData);
-        setProductId(id);
-        toast.success(status === 'published' ? 'Producto publicado.' : 'Guardado como borrador.');
+
+        const masterId = await createProduct(newMasterData);
+        setProductId(masterId);
+        toast.success('Producto maestro creado. Creando variantes...');
+
+        // Crear variantes desde variantMatrixData
+        const enabledVariants = Object.entries(variantMatrixData.cells)
+          .filter(([_, cell]) => cell.enabled)
+          .map(([key, cell]) => {
+            const [color, storage] = key.split('|');
+            return { color, storage: storage as StorageCapacity, ...cell };
+          });
+
+        let variantsCreated = 0;
+        for (const variant of enabledVariants) {
+          const variantTitle = `${form.model} ${variant.storage} ${variant.color}${variant.grade ? ` Grado ${variant.grade}` : ''}${variant.batteryHealth ? ` ${variant.batteryHealth}%` : ''}`;
+          const variantSlug = slugify(`${form.slug}-${variant.storage}-${variant.color}${variant.grade ? `-${variant.grade}` : ''}`);
+          const variantSKU = `${form.model}-${variant.storage}-${variant.color}-${variant.grade || variant.condition}`.replace(/\s+/g, '-').toUpperCase();
+
+          const variantData = {
+            ...newMasterData,
+            title: variantTitle,
+            slug: variantSlug,
+            sku: variantSKU,
+            storage: variant.storage,
+            color: variant.color,
+            condition: variant.condition,
+            grade: variant.grade || null,
+            batteryHealth: variant.batteryHealth,
+            stock: variant.stock,
+            priceTotal: variant.priceTotal,
+            installmentAmount: calcInstallmentAmount(
+              variant.priceTotal,
+              form.interestRate / 100,
+              form.installments,
+              form.downPayment
+            ),
+            isVariant: true,
+            masterProductId: masterId,
+            masterProductSlug: form.slug,
+            status, // Las variantes heredan el status solicitado
+            publishedAt: status === 'published' ? (serverTimestamp() as any) : null,
+          };
+
+          await createProduct(variantData);
+          variantsCreated++;
+        }
+
+        toast.success(`✅ Producto maestro y ${variantsCreated} variante${variantsCreated > 1 ? 's' : ''} ${status === 'published' ? 'publicadas' : 'creadas'}.`);
+        router.push('/admin/productos');
       }
-      router.push('/admin/productos');
     } catch (err) {
       console.error(err);
       toast.error('Error al guardar. Intenta de nuevo.');
@@ -554,6 +632,15 @@ export function ProductForm({ initialProduct }: ProductFormProps) {
         )}
         {activeTab === '8' && (
           <Section8Seo form={form} setField={setField} />
+        )}
+        {activeTab === '9' && (
+          <Section9Variants
+            variantMatrixData={variantMatrixData}
+            setVariantMatrixData={setVariantMatrixData}
+            modelName={form.model}
+            basePrice={form.priceTotal}
+            masterProduct={initialProduct}
+          />
         )}
       </div>
 
@@ -1105,37 +1192,62 @@ function Section5Payments({
 function Section1BasicInfo({
   form, setField, initialProduct,
 }: { form: FormState; setField: <K extends keyof FormState>(k: K, v: FormState[K]) => void; initialProduct: Product | null }) {
+
+  // Si es una variante (estamos editando una variante), mostrar los campos completos
+  const isVariant = initialProduct?.isVariant;
+
   return (
     <div className="space-y-5">
       <SectionHeader title="Información Básica" icon={Info} />
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className="sm:col-span-2">
-          <Label>Título del producto *</Label>
-          <input className="input mt-1" value={form.title}
-            onChange={e => setField('title', e.target.value)}
-            placeholder="iPhone 15 Pro Max 256GB Titanio Natural" />
-        </div>
-        <div>
-          <Label>Slug (URL) *</Label>
-          <input className="input mt-1 font-mono text-[15px]" value={form.slug}
-            onChange={e => setField('slug', slugify(e.target.value))}
-            placeholder="iphone-15-pro-max-256gb" />
-          <p className="text-caption text-text-secondary mt-1">
-            URL: /{form.slug || 'slug-del-producto'}
+
+      {!isVariant && (
+        <div className="card p-4 bg-blue-50 border-blue-200">
+          <h4 className="font-semibold mb-2 flex items-center gap-2">
+            <Info size={18} className="text-blue-600" />
+            Producto Maestro
+          </h4>
+          <p className="text-body text-text-secondary">
+            Estás creando un <strong>producto maestro</strong>. Los campos aquí definen la información común que heredarán todas las variantes.
+            Las variantes específicas (colores, capacidades, precios) se configuran en el <strong>Tab 9: Variantes</strong>.
           </p>
         </div>
+      )}
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="sm:col-span-2">
+          <Label>Título del modelo *</Label>
+          <input className="input mt-1" value={form.title}
+            onChange={e => setField('title', e.target.value)}
+            placeholder="iPhone 15 Pro - Compra en Cuotas Sin Tarjeta" />
+          <p className="text-caption text-text-secondary mt-1">
+            {isVariant ? 'Título de esta variante específica' : 'Título base del modelo (se usará como base para las variantes)'}
+          </p>
+        </div>
+
         <div>
-          <Label>SKU (auto-generado)</Label>
-          <input className="input mt-1 font-mono text-[15px] bg-bg-secondary"
+          <Label>Slug base (URL) *</Label>
+          <input className="input mt-1 font-mono text-[15px]" value={form.slug}
+            onChange={e => setField('slug', slugify(e.target.value))}
+            placeholder="iphone-15-pro" />
+          <p className="text-caption text-text-secondary mt-1">
+            URL base: /{form.slug || 'slug-del-producto'}
+            {!isVariant && ' (variantes: ?variant=ID)'}
+          </p>
+        </div>
+
+        <div>
+          <Label>SKU base</Label>
+          <input className="input mt-1 font-mono text-[15px] bg-surface-secondary"
             value={form.sku}
             readOnly
-            placeholder="Se genera automáticamente desde el slug" />
+            placeholder="Se genera automáticamente" />
           <p className="text-caption text-text-secondary mt-1">
             Identificador único para Merchant Center
           </p>
         </div>
+
         <div>
-          <Label>Modelo</Label>
+          <Label>Modelo de iPhone *</Label>
           <select className="input mt-1" value={form.model}
             onChange={e => setField('model', e.target.value)}>
             {IPHONE_MODELS.map(m => (
@@ -1143,42 +1255,120 @@ function Section1BasicInfo({
             ))}
           </select>
         </div>
+
         <div>
-          <Label>Almacenamiento</Label>
-          <select className="input mt-1" value={form.storage}
-            onChange={e => setField('storage', e.target.value as StorageCapacity)}>
-            {STORAGE_OPTIONS.map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+          <Label>Product Group ID *</Label>
+          <input className="input mt-1 font-mono text-[15px] bg-surface-secondary"
+            value={form.productGroupId}
+            readOnly
+            placeholder="Se genera desde el modelo" />
+          <p className="text-caption text-text-secondary mt-1">
+            Agrupa todas las variantes del mismo modelo
+          </p>
         </div>
-        <div>
-          <Label>Color</Label>
-          <input className="input mt-1" value={form.color}
-            onChange={e => setField('color', e.target.value)}
-            placeholder="Titanio Natural" />
-        </div>
-        <div>
-          <Label>Condición</Label>
-          <select className="input mt-1" value={form.condition}
-            onChange={e => setField('condition', e.target.value as ProductCondition)}>
-            <option value="new">Nuevo</option>
-            <option value="refurbished">Reacondicionado</option>
-          </select>
-        </div>
-        {form.condition === 'refurbished' && (
-          <div>
-            <Label>Grado de calidad</Label>
-            <select className="input mt-1" value={form.grade}
-              onChange={e => setField('grade', e.target.value as ProductGrade)}>
-              <option value="">Seleccionar…</option>
-              <option value="A+">A+ (Como nuevo)</option>
-              <option value="A">A (Excelente)</option>
-              <option value="B">B (Bueno)</option>
-            </select>
-          </div>
+
+        {/* Solo mostrar estos campos si es una variante existente */}
+        {isVariant && (
+          <>
+            <div>
+              <Label>Almacenamiento</Label>
+              <select className="input mt-1" value={form.storage}
+                onChange={e => setField('storage', e.target.value as StorageCapacity)}>
+                {STORAGE_OPTIONS.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>Color</Label>
+              <input className="input mt-1" value={form.color}
+                onChange={e => setField('color', e.target.value)}
+                placeholder="Titanio Natural" />
+            </div>
+            <div>
+              <Label>Condición</Label>
+              <select className="input mt-1" value={form.condition}
+                onChange={e => setField('condition', e.target.value as ProductCondition)}>
+                <option value="new">Nuevo</option>
+                <option value="refurbished">Reacondicionado</option>
+              </select>
+            </div>
+            {form.condition === 'refurbished' && (
+              <>
+                <div>
+                  <Label>Grado de calidad</Label>
+                  <select className="input mt-1" value={form.grade}
+                    onChange={e => setField('grade', e.target.value as ProductGrade)}>
+                    <option value="">Seleccionar…</option>
+                    <option value="A+">A+ (Como nuevo)</option>
+                    <option value="A">A (Excelente)</option>
+                    <option value="B">B (Bueno)</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Salud de batería</Label>
+                  <select className="input mt-1" value={form.batteryHealth ?? ''}
+                    onChange={e => setField('batteryHealth', e.target.value ? Number(e.target.value) as BatteryHealth : null)}>
+                    <option value="">No especificado</option>
+                    <option value="100">100%</option>
+                    <option value="95">95%</option>
+                    <option value="90">90%</option>
+                    <option value="85">85%</option>
+                    <option value="80">80%</option>
+                  </select>
+                </div>
+              </>
+            )}
+            <div>
+              <Label>Stock disponible</Label>
+              <input className="input mt-1" type="number" min="0" value={form.stock}
+                onChange={e => setField('stock', parseInt(e.target.value, 10) || 0)} />
+            </div>
+          </>
         )}
+
+        {/* Campos SEO/Schema (siempre visibles) */}
+        <div className="sm:col-span-2 pt-4 border-t border-border">
+          <h3 className="text-label font-semibold mb-3">Campos SEO y Merchant Center</h3>
+        </div>
+
         <div>
+          <Label>MPN (Manufacturer Part Number)</Label>
+          <input className="input mt-1" value={form.mpn}
+            onChange={e => setField('mpn', e.target.value)}
+            placeholder="Opcional - código del fabricante" />
+        </div>
+
+        <div>
+          <Label>GTIN (código de barras)</Label>
+          <input className="input mt-1" value={form.gtin}
+            onChange={e => setField('gtin', e.target.value)}
+            placeholder="Opcional - solo si tienes el real" />
+          <p className="text-caption text-text-secondary mt-1">
+            ⚠️ NO inventes valores - deja vacío si no tienes el código real
+          </p>
+        </div>
+
+        <div>
+          <Label>Categoría</Label>
+          <input className="input mt-1" value={form.category}
+            onChange={e => setField('category', e.target.value)}
+            placeholder="Celulares y Smartphones > iPhone" />
+        </div>
+
+        <div>
+          <Label>Google Product Category ID</Label>
+          <input className="input mt-1" value={form.googleProductCategoryId}
+            onChange={e => setField('googleProductCategoryId', e.target.value)}
+            placeholder="267" />
+          <p className="text-caption text-text-secondary mt-1">
+            267 = Teléfonos móviles
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
           <Label>Stock disponible</Label>
           <input type="number" min="0" className="input mt-1" value={form.stock}
             onChange={e => setField('stock', parseInt(e.target.value) || 0)} />
@@ -1696,6 +1886,53 @@ function Section3Pricing({
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// SECTION 9 — Variantes
+// ═══════════════════════════════════════════════════════════
+function Section9Variants({
+  variantMatrixData,
+  setVariantMatrixData,
+  modelName,
+  basePrice,
+  masterProduct,
+}: {
+  variantMatrixData: VariantMatrixData;
+  setVariantMatrixData: React.Dispatch<React.SetStateAction<VariantMatrixData>>;
+  modelName: string;
+  basePrice: number;
+  masterProduct: Product | null | undefined;
+}) {
+  return (
+    <div className="space-y-5">
+      <SectionHeader title="Gestión de Variantes" icon={Plus} />
+
+      <div className="card p-5 bg-blue-50 border-blue-200">
+        <h4 className="font-semibold mb-2 flex items-center gap-2">
+          <Info size={18} className="text-blue-600" />
+          ¿Cómo funcionan las variantes?
+        </h4>
+        <ul className="text-body text-text-secondary space-y-1 list-disc list-inside">
+          <li>Crea un <strong>producto maestro</strong> con la información común (imágenes, specs, métodos de pago, etc.)</li>
+          <li>Aquí defines las <strong>variantes</strong>: combinaciones de color + storage con precio y stock específicos</li>
+          <li>Las variantes heredan automáticamente las imágenes, especificaciones y configuración del producto maestro</li>
+          <li>Cada variante tendrá su propia URL: <code className="bg-blue-100 px-1 rounded">/{modelName.toLowerCase().replace(/\s+/g, '-')}?variant=ID</code></li>
+        </ul>
+      </div>
+
+      {masterProduct ? (
+        <AdminVariantManager masterProduct={masterProduct} />
+      ) : (
+        <VariantMatrix
+          data={variantMatrixData}
+          onChange={setVariantMatrixData}
+          modelName={modelName}
+          basePrice={basePrice}
+        />
       )}
     </div>
   );
