@@ -29,7 +29,7 @@ interface AuthContextValue {
   effectivePhotoURL: string | null;
   /** Nombre efectivo: firstName+lastName si están, si no displayName de Google */
   effectiveName: string;
-  signIn: (useRedirect?: boolean) => Promise<void>;
+  signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   /** Refresca el appUser desde Firestore (útil después de actualizar el perfil) */
   refreshUser: () => Promise<void>;
@@ -61,8 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const signIn = useCallback(async (useRedirect = false) => {
-    await signInWithGoogleAndCreateSession(useRedirect);
+  const signIn = useCallback(async () => {
+    await signInWithGoogleAndCreateSession();
   }, []);
 
   const signOut = useCallback(async () => {

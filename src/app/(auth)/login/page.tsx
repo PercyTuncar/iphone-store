@@ -10,11 +10,6 @@ import { toast } from '@/components/ui/Toast';
 import { ClientMetadata } from '@/components/seo/ClientMetadata';
 import Link from 'next/link';
 
-function isMobile(): boolean {
-  if (typeof window === 'undefined') return false;
-  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-}
-
 export default function LoginPage() {
   return (
     <>
@@ -46,11 +41,10 @@ function LoginInner() {
   const handleGoogleSignIn = async () => {
     setSigningIn(true);
     try {
-      // signIn() incluye: signInWithPopup + getIdToken + POST /api/session (cookie)
-      // Solo después de que todo esto resuelve hacemos la redirección.
-      // Esto evita la race condition donde el redirect ocurre antes de que
-      // se establezca la cookie __session.
-      await signIn(isMobile());
+      // signIn() usa signInWithPopup (sin redirect) para evitar el error
+      // "missing initial state" en navegadores móviles que bloquean
+      // almacenamiento cross-origin desde junio 2024.
+      await signIn();
 
       // Cookie establecida → ahora sí redirigimos de forma segura
       router.replace(callbackUrl);

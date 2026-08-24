@@ -5,7 +5,6 @@
 import {
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect,
   signOut,
   onAuthStateChanged,
   type User as FirebaseUser,
@@ -25,24 +24,22 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('email');
 googleProvider.addScope('profile');
 
-export async function signInWithGoogle(useRedirect = false): Promise<void> {
-  if (useRedirect) {
-    await signInWithRedirect(auth, googleProvider);
-  } else {
-    await signInWithPopup(auth, googleProvider);
-  }
+/**
+ * Sign in with Google using popup (recommended for mobile compatibility).
+ *
+ * Desde junio 2024, Chrome/Safari/Firefox en móviles bloquean el almacenamiento
+ * cross-origin necesario para signInWithRedirect, causando el error
+ * "missing initial state". signInWithPopup evita este problema completamente.
+ */
+export async function signInWithGoogle(): Promise<void> {
+  await signInWithPopup(auth, googleProvider);
 }
 
 /**
  * Sign in with Google AND create the HTTPOnly session cookie.
+ * Siempre usa popup para evitar problemas de almacenamiento cross-origin en móviles.
  */
-export async function signInWithGoogleAndCreateSession(
-  useRedirect = false
-): Promise<void> {
-  if (useRedirect) {
-    await signInWithRedirect(auth, googleProvider);
-    return;
-  }
+export async function signInWithGoogleAndCreateSession(): Promise<void> {
   const result = await signInWithPopup(auth, googleProvider);
   const idToken = await result.user.getIdToken();
 
