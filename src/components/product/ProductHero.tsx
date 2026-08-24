@@ -46,35 +46,38 @@ export function ProductHero({
     <section className="section-gradient">
       <div className="container-main grid lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] gap-8 items-start">
         {/* ── Gallery ── */}
-        <div className="space-y-4">
-          <div className="card overflow-hidden">
+        <div className="space-y-4 w-full">
+          {/* Imagen principal con aspect ratio controlado */}
+          <div className="card overflow-hidden relative w-full aspect-square max-w-full">
             <AppImage
               src={images[activeIdx]}
               alt={product.title}
               width={1200}
               height={1200}
               priority
-              className="w-full h-auto object-contain bg-bg-primary"
+              className="w-full h-full object-contain bg-bg-primary"
             />
           </div>
 
+          {/* Miniaturas con scroll horizontal en móvil */}
           {images.length > 1 && (
-            <div className="flex gap-3 overflow-x-auto pb-1">
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
               {images.map((src, i) => (
                 <button
                   key={src + i}
                   type="button"
                   onClick={() => setActiveIdx(i)}
                   className={clsx(
-                    'flex-shrink-0 w-16 h-16 rounded-[10px] overflow-hidden border-2 transition-colors',
+                    'flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-[10px] overflow-hidden border-2 transition-colors',
                     activeIdx === i ? 'border-accent' : 'border-border hover:border-accent/50'
                   )}
+                  aria-label={`Ver imagen ${i + 1} de ${images.length}`}
                 >
                   <AppImage
                     src={src}
                     alt={`Miniatura ${i + 1}`}
-                    width={64}
-                    height={64}
+                    width={80}
+                    height={80}
                     className="object-cover w-full h-full"
                   />
                 </button>
