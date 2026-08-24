@@ -24,7 +24,9 @@
       "Bash(grep -i \"canonical\" /tmp/iphone18.html | head -2)",
       "Bash(grep -i \"og:title\\\\|og:description\" /tmp/iphone18.html | head -3)",
       "Bash(curl -s \"https://www.iphoneencuotas.com/\")",
-      "Bash(curl -I \"https://www.iphoneencuotas.com/\")"
+      "Bash(curl -I \"https://www.iphoneencuotas.com/\")",
+      "WebFetch(domain:firebase.google.com)",
+      "PowerShell(git add 'src/app/\\(auth\\)/login/page.tsx' 'src/context/AuthContext.tsx' 'src/lib/firebase/auth.ts' 'docs/')"
     ]
   }
 }
