@@ -559,3 +559,46 @@ html { scroll-padding-top: 80px; } /* account for fixed navbar */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;             /* Chrome, Safari and Opera */
 }
+
+/* Responsive container improvements */
+.container-main {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 clamp(16px, 4vw, 24px);
+  overflow-x: hidden;
+}
+
+/* Prevent text overflow */
+.break-words-safe {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Prevent horizontal overflow on mobile */
+* {
+  max-width: 100%;
+  word-wrap: break-word;
+}
+
+/* Allow specific elements to exceed container */
+img, video, iframe, canvas, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Ensure containers don't cause horizontal scroll */
+.container-main {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 clamp(16px, 4vw, 24px);
+}
+
+/* Grid utilities for responsive */
+.grid-responsive {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 1rem;
+}

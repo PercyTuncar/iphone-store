@@ -83,12 +83,12 @@ export function InstallmentSelector({
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full min-w-0">
       {/* Interest Rate Info */}
       {product.interestRate > 0 && (
         <div className="flex items-start gap-2 p-3 rounded-[12px] bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
           <Info size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
-          <p className="text-[13px] text-blue-900 leading-relaxed">
+          <p className="text-[13px] text-blue-900 leading-relaxed break-words">
             <span className="font-semibold">Interés mensual: {(product.interestRate * 100).toFixed(1)}%</span>
             {' · '}Financiamiento disponible hasta {product.installments} meses
           </p>
@@ -96,7 +96,7 @@ export function InstallmentSelector({
       )}
 
       {/* Options - Scrollable horizontal on all screens */}
-      <div className="relative -mx-2">
+      <div className="relative -mx-2 w-full min-w-0">
         {/* Navigation buttons - visible on hover (desktop only) */}
         <button
           onClick={() => scroll('left')}
@@ -116,7 +116,7 @@ export function InstallmentSelector({
 
         <div
           ref={scrollContainerRef}
-          className="flex gap-2 overflow-x-scroll pb-2 pt-2 scrollbar-hide snap-x snap-mandatory px-2 cursor-grab active:cursor-grabbing"
+          className="flex gap-2 overflow-x-auto pb-2 pt-2 scrollbar-hide snap-x snap-mandatory px-2 cursor-grab active:cursor-grabbing max-w-full"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {options.map((installments) => {

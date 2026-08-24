@@ -163,10 +163,10 @@ export function VariantSelectorButtons({
   const isComplete = hasStorage && hasColor && selectedVariant;
 
   return (
-    <section className="card p-5 md:p-6 space-y-6">
+    <section className="card p-4 sm:p-5 md:p-6 space-y-5 sm:space-y-6 w-full min-w-0 overflow-hidden">
       {/* Header con progreso */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <p className="text-label uppercase tracking-[0.18em]" style={{ color: 'var(--color-text-secondary)' }}>
             Configuración
           </p>
@@ -189,13 +189,13 @@ export function VariantSelectorButtons({
           </div>
         </div>
 
-        <h2 className="text-[20px] font-semibold leading-tight" style={{ color: 'var(--color-text-primary)' }}>
+        <h2 className="text-[18px] sm:text-[20px] font-semibold leading-tight break-words" style={{ color: 'var(--color-text-primary)' }}>
           {!hasStorage && 'Elige la capacidad de tu ' + productTitle}
           {hasStorage && !hasColor && 'Ahora elige el color'}
           {isComplete && 'Tu configuración está lista'}
         </h2>
 
-        <p className="text-body text-[15px]" style={{ color: 'var(--color-text-secondary)' }}>
+        <p className="text-body text-[14px] sm:text-[15px]" style={{ color: 'var(--color-text-secondary)' }}>
           {!hasStorage && 'Empieza seleccionando cuánto espacio necesitas.'}
           {hasStorage && !hasColor && 'Selecciona el color que más te guste.'}
           {isComplete && 'Puedes cambiar tu selección en cualquier momento.'}
@@ -203,10 +203,10 @@ export function VariantSelectorButtons({
       </div>
 
       {/* Selector de almacenamiento */}
-      <div className="space-y-3">
-        <label className="text-[15px] font-semibold flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+      <div className="space-y-3 w-full min-w-0">
+        <label className="text-[14px] sm:text-[15px] font-semibold flex items-center gap-2 flex-wrap" style={{ color: 'var(--color-text-primary)' }}>
           <span
-            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all"
+            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all flex-shrink-0"
             style={{
               background: hasStorage ? 'var(--color-accent)' : 'var(--color-bg-secondary)',
               color: hasStorage ? '#FFFFFF' : 'var(--color-text-secondary)',
@@ -215,9 +215,9 @@ export function VariantSelectorButtons({
           >
             1
           </span>
-          Capacidad de almacenamiento
+          <span className="break-words">Capacidad de almacenamiento</span>
         </label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 w-full">
           {storageOptions.map((storage) => {
             const isSelected = selection.storage === storage;
             const isAvailable = isStorageAvailable(storage);

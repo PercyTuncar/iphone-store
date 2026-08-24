@@ -43,125 +43,127 @@ export function ProductHero({
   }, [product.id]);
 
   return (
-    <section className="section-gradient">
-      <div className="container-main grid lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] gap-8 items-start">
-        {/* ── Gallery ── */}
-        <div className="space-y-4 w-full">
-          {/* Imagen principal con aspect ratio controlado */}
-          <div className="card overflow-hidden relative w-full aspect-square max-w-full">
-            <AppImage
-              src={images[activeIdx]}
-              alt={product.title}
-              width={1200}
-              height={1200}
-              priority
-              className="w-full h-full object-contain bg-bg-primary"
-            />
-          </div>
-
-          {/* Miniaturas con scroll horizontal en móvil */}
-          {images.length > 1 && (
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-              {images.map((src, i) => (
-                <button
-                  key={src + i}
-                  type="button"
-                  onClick={() => setActiveIdx(i)}
-                  className={clsx(
-                    'flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-[10px] overflow-hidden border-2 transition-colors',
-                    activeIdx === i ? 'border-accent' : 'border-border hover:border-accent/50'
-                  )}
-                  aria-label={`Ver imagen ${i + 1} de ${images.length}`}
-                >
-                  <AppImage
-                    src={src}
-                    alt={`Miniatura ${i + 1}`}
-                    width={80}
-                    height={80}
-                    className="object-cover w-full h-full"
-                  />
-                </button>
-              ))}
+    <section className="section-gradient overflow-hidden">
+      <div className="container-main">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-6 lg:gap-8 items-start max-w-full">
+          {/* ── Gallery ── */}
+          <div className="space-y-4 w-full min-w-0">
+            {/* Imagen principal con aspect ratio controlado */}
+            <div className="card overflow-hidden relative w-full aspect-square">
+              <AppImage
+                src={images[activeIdx]}
+                alt={product.title}
+                width={1200}
+                height={1200}
+                priority
+                className="w-full h-full object-contain bg-bg-primary"
+              />
             </div>
-          )}
-        </div>
 
-        {/* ── Product info ── */}
-        <div className="flex flex-col gap-5 md:sticky md:top-20">
-          <div className="flex flex-wrap gap-2">
-            <Badge variant={product.condition === 'new' ? 'accent' : 'neutral'}>
-              {product.condition === 'new' ? 'Nuevo' : 'Reacondicionado'}
-            </Badge>
-            {product.grade && <Badge variant="info">Grado {product.grade}</Badge>}
-            {product.storage && <Badge variant="neutral">{product.storage}</Badge>}
-            {product.color && <Badge variant="neutral">{product.color}</Badge>}
-            {hasBattery && <Badge variant="neutral">Batería {product.batteryHealth}%</Badge>}
-          </div>
-
-          <h1 className="text-[clamp(26px,4vw,40px)] font-bold leading-tight tracking-tight">
-            {product.seo.h1 || product.title}
-          </h1>
-
-          {/* Selector de variantes - aparece antes de pricing */}
-          {variantSelector && (
-            <div className="-mx-1">
-              {variantSelector}
-            </div>
-          )}
-
-          {product.reviewCount > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-[#FF9F0A]" aria-hidden="true">
-                {'★'.repeat(Math.round(product.averageRating))}
-              </span>
-              <span className="text-label text-text-secondary">
-                {product.averageRating.toFixed(1)} ({product.reviewCount} reseñas)
-              </span>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <p className="text-label text-text-secondary">Precio total</p>
-            <div className="flex items-end gap-2 flex-wrap">
-              <span className="text-[clamp(36px,5vw,56px)] font-bold tracking-tight text-accent leading-none">
-                S/ {product.priceTotal.toFixed(2)}
-              </span>
-              {product.stock > 0 && product.stock <= 5 && (
-                <span className="text-label text-warning font-medium">Solo quedan {product.stock} unidades</span>
-              )}
-              {product.stock === 0 && (
-                <span className="text-label text-danger font-medium">Sin stock</span>
-              )}
-            </div>
-          </div>
-
-          <InstallmentSelector
-            product={product}
-            selectedInstallments={selectedInstallments}
-            onSelect={onInstallmentSelect}
-          />
-
-          <div className="flex flex-col gap-3 pt-2">
-            <button
-              className="btn btn-primary w-full text-[17px] py-4"
-              onClick={onReserve}
-              disabled={product.stock === 0}
-            >
-              {selectedInstallments === 1
-                ? `Comprar por S/ ${product.priceTotal.toFixed(2)}`
-                : `Reservar con S/ ${(
-                    product.downPayment > 0
-                      ? product.downPayment
-                      : (installmentCalculation?.installmentAmount ?? product.installmentAmount)
-                  ).toFixed(2)}`}
-            </button>
-
-            {product.stock > 0 && product.stock <= 5 && (
-              <p className="text-label text-warning text-center -mt-2 flex items-center justify-center gap-1">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
-                Solo quedan {product.stock} unidades disponibles
-              </p>
+            {/* Miniaturas con scroll horizontal en móvil */}
+            {images.length > 1 && (
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
+                {images.map((src, i) => (
+                  <button
+                    key={src + i}
+                    type="button"
+                    onClick={() => setActiveIdx(i)}
+                    className={clsx(
+                      'flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-[10px] overflow-hidden border-2 transition-colors',
+                      activeIdx === i ? 'border-accent' : 'border-border hover:border-accent/50'
+                    )}
+                    aria-label={`Ver imagen ${i + 1} de ${images.length}`}
+                  >
+                    <AppImage
+                      src={src}
+                      alt={`Miniatura ${i + 1}`}
+                      width={80}
+                      height={80}
+                      className="object-cover w-full h-full"
+                    />
+                  </button>
+                ))}
+              </div>
             )}
+          </div>
+
+          {/* ── Product info ── */}
+          <div className="flex flex-col gap-4 md:gap-5 lg:sticky lg:top-20 w-full min-w-0">
+            <div className="flex flex-wrap gap-2">
+              <Badge variant={product.condition === 'new' ? 'accent' : 'neutral'}>
+                {product.condition === 'new' ? 'Nuevo' : 'Reacondicionado'}
+              </Badge>
+              {product.grade && <Badge variant="info">Grado {product.grade}</Badge>}
+              {product.storage && <Badge variant="neutral">{product.storage}</Badge>}
+              {product.color && <Badge variant="neutral">{product.color}</Badge>}
+              {hasBattery && <Badge variant="neutral">Batería {product.batteryHealth}%</Badge>}
+            </div>
+
+            <h1 className="text-[clamp(24px,5vw,40px)] font-bold leading-[1.1] tracking-tight break-words">
+              {product.seo.h1 || product.title}
+            </h1>
+
+            {/* Selector de variantes - aparece antes de pricing */}
+            {variantSelector && (
+              <div className="-mx-1">
+                {variantSelector}
+              </div>
+            )}
+
+            {product.reviewCount > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[#FF9F0A]" aria-hidden="true">
+                  {'★'.repeat(Math.round(product.averageRating))}
+                </span>
+                <span className="text-label text-text-secondary">
+                  {product.averageRating.toFixed(1)} ({product.reviewCount} reseñas)
+                </span>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <p className="text-label text-text-secondary">Precio total</p>
+              <div className="flex items-end gap-2 flex-wrap">
+                <span className="text-[clamp(32px,6vw,56px)] font-bold tracking-tight text-accent leading-none break-all">
+                  S/ {product.priceTotal.toFixed(2)}
+                </span>
+                {product.stock > 0 && product.stock <= 5 && (
+                  <span className="text-label text-warning font-medium">Solo quedan {product.stock} unidades</span>
+                )}
+                {product.stock === 0 && (
+                  <span className="text-label text-danger font-medium">Sin stock</span>
+                )}
+              </div>
+            </div>
+
+            <InstallmentSelector
+              product={product}
+              selectedInstallments={selectedInstallments}
+              onSelect={onInstallmentSelect}
+            />
+
+            <div className="flex flex-col gap-3 pt-2">
+              <button
+                className="btn btn-primary w-full text-[16px] sm:text-[17px] py-3.5 sm:py-4"
+                onClick={onReserve}
+                disabled={product.stock === 0}
+              >
+                {selectedInstallments === 1
+                  ? `Comprar por S/ ${product.priceTotal.toFixed(2)}`
+                  : `Reservar con S/ ${(
+                      product.downPayment > 0
+                        ? product.downPayment
+                        : (installmentCalculation?.installmentAmount ?? product.installmentAmount)
+                    ).toFixed(2)}`}
+              </button>
+
+              {product.stock > 0 && product.stock <= 5 && (
+                <p className="text-label text-warning text-center -mt-2 flex items-center justify-center gap-1 flex-wrap">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
+                  Solo quedan {product.stock} unidades disponibles
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>

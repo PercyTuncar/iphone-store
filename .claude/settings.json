@@ -26,7 +26,11 @@
       "Bash(curl -s \"https://www.iphoneencuotas.com/\")",
       "Bash(curl -I \"https://www.iphoneencuotas.com/\")",
       "WebFetch(domain:firebase.google.com)",
-      "PowerShell(git add 'src/app/\\(auth\\)/login/page.tsx' 'src/context/AuthContext.tsx' 'src/lib/firebase/auth.ts' 'docs/')"
+      "PowerShell(git add 'src/app/\\(auth\\)/login/page.tsx' 'src/context/AuthContext.tsx' 'src/lib/firebase/auth.ts' 'docs/')",
+      "PowerShell(git add 'src/components/product/ProductHero.tsx')",
+      "PowerShell(git add 'docs/responsive-images-fix.md')",
+      "PowerShell(git commit -m \"docs: add responsive images fix documentation\")",
+      "PowerShell(git add -A)"
     ]
   }
 }
