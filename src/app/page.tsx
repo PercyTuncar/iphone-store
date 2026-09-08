@@ -10,6 +10,7 @@ import { AppImage } from '@/components/ui/AppImage';
 import { Badge } from '@/components/ui/Badge';
 import { formatSoles } from '@/lib/utils/currency';
 import { calculateDisplayPrice, getDisplayPriceLabel } from '@/lib/utils/pricing';
+import { calculateInstallmentAmount } from '@/lib/utils/installments';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { buildOrganizationSchema, buildWebsiteSchema } from '@/lib/utils/schema';
 import type { ProductCard } from '@/types/product';
@@ -262,6 +263,20 @@ function ProductCard({ product }: { product: ProductCard }) {
   const priceLabel = getDisplayPriceLabel(product.downPayment, product.installments);
   const isDownPayment = product.downPayment > 0;
 
+  // Calcula la cuota mensual correcta (recalculando, no usando el campo almacenado)
+  // porque el campo almacenado puede estar desactualizado
+  const correctInstallmentAmount = calculateInstallmentAmount(
+    product.priceTotal,
+    product.interestRate,
+    product.installments,
+    product.downPayment
+  );
+
+  // Número de cuotas restantes después del downPayment
+  const remainingInstallments = product.downPayment > 0
+    ? product.installments - 1
+    : product.installments;
+
   return (
     <Link
       href={`/${product.slug}`}
@@ -318,7 +333,7 @@ function ProductCard({ product }: { product: ProductCard }) {
           </p>
           {isDownPayment ? (
             <p className="text-caption text-text-tertiary mt-1">
-              Luego {product.installments - 1} cuotas de {formatSoles(product.installmentAmount)}
+              Luego hasta {remainingInstallments} cuotas de {formatSoles(correctInstallmentAmount)}
             </p>
           ) : (
             <p className="text-caption text-text-tertiary mt-1">
