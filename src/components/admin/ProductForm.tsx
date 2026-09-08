@@ -1419,7 +1419,7 @@ function Section8Seo({
           )}
           <div className="flex-1">
             <p className="text-[12px] text-[#006621] mb-0.5">
-              iphoneencuotas.com › {form.slug || slugify(form.model) || 'slug'}
+              www.iphoneencuotas.com › {form.slug || slugify(form.model) || 'slug'}
             </p>
             <p className={`text-[18px] text-[#1a0dab] leading-tight mb-1 ${metaTitleLen > 60 ? 'text-danger' : ''}`}>
               {form.metaTitle || suggestedSeo.metaTitle || 'Título del producto'}
@@ -1449,7 +1449,7 @@ function Section8Seo({
             {/* Contenido OG */}
             <div className="p-3 border-t border-border">
               <p className="text-[11px] text-[#606770] uppercase mb-1">
-                {new URL(suggestedSeo.canonicalUrl || 'https://iphoneencuotas.com').hostname}
+                {new URL(suggestedSeo.canonicalUrl || 'https://www.iphoneencuotas.com').hostname}
               </p>
               <p className="text-[14px] text-[#1c1e21] font-semibold leading-tight mb-1 line-clamp-2">
                 {form.ogTitle || suggestedSeo.ogTitle || form.metaTitle || 'Título del producto'}
@@ -1480,7 +1480,7 @@ function Section8Seo({
             {/* Contenido Twitter */}
             <div className="p-3">
               <p className="text-[13px] text-[#536471] mb-0.5">
-                {new URL(suggestedSeo.canonicalUrl || 'https://iphoneencuotas.com').hostname}
+                {new URL(suggestedSeo.canonicalUrl || 'https://www.iphoneencuotas.com').hostname}
               </p>
               <p className="text-[15px] text-[#0f1419] font-semibold leading-tight mb-1 line-clamp-1">
                 {form.twitterTitle || suggestedSeo.twitterTitle || form.metaTitle || 'Título del producto'}
@@ -1528,8 +1528,8 @@ function Section8Seo({
   // Función helper para generar preview del schema
   function generateSchemaPreview() {
     const productUrl = form.isVariant && form.masterProductSlug
-      ? `https://iphoneencuotas.com/${form.masterProductSlug}?variant=${form.slug}`
-      : `https://iphoneencuotas.com/${form.slug || slugify(form.model)}`;
+      ? `https://www.iphoneencuotas.com/${form.masterProductSlug}?variant=${form.slug}`
+      : `https://www.iphoneencuotas.com/${form.slug || slugify(form.model)}`;
 
     return {
       '@context': 'https://schema.org/',
@@ -1575,7 +1575,7 @@ function Section8Seo({
       ...(form.productGroupId && {
         isVariantOf: {
           '@type': 'ProductGroup',
-          '@id': `https://iphoneencuotas.com/#productgroup-${form.productGroupId}`,
+          '@id': `https://www.iphoneencuotas.com/#productgroup-${form.productGroupId}`,
           productGroupID: form.productGroupId,
           name: form.model,
         },
