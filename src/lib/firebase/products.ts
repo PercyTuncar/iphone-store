@@ -62,10 +62,14 @@ export async function getAllPublishedProducts(): Promise<ProductCard[]> {
       priceTotal: data.priceTotal,
       installments: data.installments,
       installmentAmount: data.installmentAmount,
+      downPayment: data.downPayment,
+      interestRate: data.interestRate,
       stock: data.stock,
       averageRating: data.averageRating,
       reviewCount: data.reviewCount,
       status: data.status,
+      productGroupId: data.productGroupId,
+      isVariant: data.isVariant,
     } as ProductCard;
   });
 }

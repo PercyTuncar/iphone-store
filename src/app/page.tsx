@@ -9,6 +9,7 @@ import { getFeaturedReviews } from '@/lib/firebase/reviews';
 import { AppImage } from '@/components/ui/AppImage';
 import { Badge } from '@/components/ui/Badge';
 import { formatSoles } from '@/lib/utils/currency';
+import { calculateDisplayPrice, getDisplayPriceLabel } from '@/lib/utils/pricing';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { buildOrganizationSchema, buildWebsiteSchema } from '@/lib/utils/schema';
 import type { ProductCard } from '@/types/product';
@@ -249,6 +250,18 @@ export default async function HomePage() {
 /* ─── Sub-components ──────────────────────────────────────────── */
 
 function ProductCard({ product }: { product: ProductCard }) {
+  // Calcula el precio más atractivo para mostrar (reserva inicial o cuota más baja)
+  const displayPrice = calculateDisplayPrice(
+    product.priceTotal,
+    product.installments,
+    product.interestRate,
+    product.downPayment
+  );
+
+  // Obtiene el texto descriptivo apropiado
+  const priceLabel = getDisplayPriceLabel(product.downPayment, product.installments);
+  const isDownPayment = product.downPayment > 0;
+
   return (
     <Link
       href={`/${product.slug}`}
@@ -298,14 +311,20 @@ function ProductCard({ product }: { product: ProductCard }) {
         )}
         <div className="mt-auto pt-3 border-t border-border">
           <p className="text-caption text-text-secondary mb-0.5">
-            {product.installments} cuotas de
+            {priceLabel}
           </p>
-          <p className="text-[22px] font-bold text-text-primary">
-            {formatSoles(product.installmentAmount)}
+          <p className="text-[28px] font-bold text-accent leading-tight">
+            {formatSoles(displayPrice)}
           </p>
-          <p className="text-caption text-text-tertiary mt-0.5">
-            Total: {formatSoles(product.priceTotal)}
-          </p>
+          {isDownPayment ? (
+            <p className="text-caption text-text-tertiary mt-1">
+              Luego {product.installments - 1} cuotas de {formatSoles(product.installmentAmount)}
+            </p>
+          ) : (
+            <p className="text-caption text-text-tertiary mt-1">
+              Total: {formatSoles(product.priceTotal)}
+            </p>
+          )}
         </div>
         <div className="mt-4">
           <span className="btn btn-primary w-full text-[15px] py-2.5 text-center block">

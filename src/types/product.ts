@@ -171,6 +171,8 @@ export type ProductCard = Pick<
   | 'priceTotal'
   | 'installments'
   | 'installmentAmount'
+  | 'downPayment'
+  | 'interestRate'
   | 'stock'
   | 'averageRating'
   | 'reviewCount'
